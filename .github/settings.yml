@@ -1,0 +1,64 @@
+repository:
+  # See https://docs.github.com/en/rest/reference/repos#update-a-repository for all available settings.
+  # A short description of the repository that will show up on GitHub
+  description: A modern web application for managing driver-rider relationships and ride scheduling
+
+  # Either `true` to make the repository private, or `false` to make it public.
+  private: false
+
+  # Either `true` to enable issues for this repository, `false` to disable them.
+  has_issues: true
+
+  # Either `true` to enable projects for this repository, or `false` to disable them.
+  has_projects: true
+
+  # Either `true` to enable the wiki for this repository, `false` to disable it.
+  has_wiki: false
+
+  # Either `true` to enable downloads for this repository, `false` to disable them.
+  has_downloads: true
+
+  # Updates the default branch for this repository.
+  default_branch: master
+
+  # Either `true` to allow squash-merging pull requests, or `false` to prevent
+  # squash-merging.
+  allow_squash_merge: true
+
+  # Either `true` to allow merging pull requests with a merge commit, or `false`
+  # to prevent merging pull requests with merge commits.
+  allow_merge_commit: true
+
+  # Either `true` to allow rebase-merging pull requests, or `false` to prevent
+  # rebase-merging.
+  allow_rebase_merge: true
+
+branches:
+  - name: master
+    # https://docs.github.com/en/rest/reference/repos#update-branch-protection
+    # Branch Protection settings
+    protection:
+      # Required status checks
+      required_status_checks:
+        # Require branches to be up to date before merging
+        strict: true
+        # Status checks that are required
+        contexts: ['build-and-test', 'security', 'lint']
+
+      # Required pull request reviews
+      required_pull_request_reviews:
+        # The number of reviewers required to approve a pull request
+        required_approving_review_count: 1
+        # Dismiss approved reviews automatically when a new commit is pushed
+        dismiss_stale_reviews: true
+        # Require review from Code Owners
+        require_code_owner_reviews: true
+
+      # Required signatures
+      required_signatures: true
+
+      # Include administrators
+      enforce_admins: true
+
+      # Restrict who can push to the protected branch
+      restrictions: null
