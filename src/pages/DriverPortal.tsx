@@ -11,6 +11,7 @@ import { ScheduleManager } from '../components/dashboard/ScheduleManager';
 import { CommunicationHub } from '../components/dashboard/CommunicationHub';
 import { Settings } from '../components/dashboard/Settings';
 import { Driver } from '../types/driver';
+import { DriverSchedule } from '../components/dashboard/DriverSchedule';
 
 type DashboardView = 'overview' | 'rides' | 'earnings' | 'schedule' | 'messages' | 'settings';
 
@@ -74,7 +75,7 @@ export default function DriverPortal() {
       case 'earnings':
         return <EarningsCenter driver={driver} />;
       case 'schedule':
-        return <ScheduleManager driver={driver} />;
+        return <DriverSchedule />;
       case 'messages':
         return <CommunicationHub driver={driver} />;
       case 'settings':

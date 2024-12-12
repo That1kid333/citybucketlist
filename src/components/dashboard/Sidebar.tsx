@@ -7,6 +7,8 @@ import {
   MessageSquareIcon,
   SettingsIcon,
   LogOutIcon,
+  Users,
+  MessageCircle,
 } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 import { NavLink } from 'react-router-dom';
@@ -32,6 +34,7 @@ export function Sidebar({ currentView, onViewChange, userType }: SidebarProps) {
   const riderNavItems = [
     { id: 'overview', label: 'Overview', icon: HomeIcon },
     { id: 'rides', label: 'Rides', icon: CarIcon },
+    { id: 'schedule', label: 'Schedule', icon: CalendarIcon },
     { id: 'messages', label: 'Messages', icon: MessageSquareIcon },
     { id: 'settings', label: 'Settings', icon: SettingsIcon },
   ];

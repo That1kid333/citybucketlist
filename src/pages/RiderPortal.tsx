@@ -4,11 +4,12 @@ import { Header } from '../components/Header';
 import { Sidebar } from '../components/dashboard/Sidebar';
 import { RiderOverview } from '../components/dashboard/RiderOverview';
 import { RiderRides } from '../components/dashboard/RiderRides';
+import { RiderSchedule } from '../components/dashboard/RiderSchedule';
 import { Messages } from '../components/messages/Messages';
 import { Settings } from '../components/dashboard/Settings';
 import { Rider } from '../types/rider';
 
-type DashboardView = 'overview' | 'rides' | 'messages' | 'settings';
+type DashboardView = 'overview' | 'rides' | 'schedule' | 'messages' | 'settings';
 
 export default function RiderPortal() {
   const { user, rider: authRider, loading } = useAuth();
@@ -38,6 +39,8 @@ export default function RiderPortal() {
         ) : (
           <div className="p-4 text-red-600">Error: Rider ID not found</div>
         );
+      case 'schedule':
+        return <RiderSchedule />;
       case 'messages':
         return <Messages user={rider} userType="rider" />;
       case 'settings':
