@@ -48,8 +48,10 @@ export function ManageRiders() {
       const newRider = await addRider(user!.uid, data);
       setRiders(prev => [newRider, ...prev]);
       setShowForm(false);
+      toast.success('Rider added successfully');
     } catch (error) {
       console.error('Error adding rider:', error);
+      toast.error('Failed to add rider');
       throw error;
     }
   };
@@ -67,8 +69,10 @@ export function ManageRiders() {
         )
       );
       setEditingRider(null);
+      toast.success('Rider updated successfully');
     } catch (error) {
       console.error('Error updating rider:', error);
+      toast.error('Failed to update rider');
       throw error;
     }
   };
@@ -78,6 +82,10 @@ export function ManageRiders() {
       await deleteRider(riderId);
       setRiders(prev => prev.filter(rider => rider.id !== riderId));
       toast.success('Rider deleted successfully');
+      // Reset editing state if the deleted rider was being edited
+      if (editingRider?.id === riderId) {
+        setEditingRider(null);
+      }
     } catch (error) {
       console.error('Error deleting rider:', error);
       toast.error('Failed to delete rider');

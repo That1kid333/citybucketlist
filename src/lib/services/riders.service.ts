@@ -9,13 +9,14 @@ import {
   getDocs,
   orderBy,
   Timestamp,
+  arrayUnion
 } from 'firebase/firestore';
 import { db } from '../firebase';
 import { Rider, RiderFormData } from '../../types/rider';
 
 export async function addRider(driverId: string, riderData: RiderFormData): Promise<Rider> {
   try {
-    const rider: Omit<Rider, 'id'> = {
+    const rider = {
       ...riderData,
       driverId,
       createdAt: new Date().toISOString(),
@@ -82,13 +83,13 @@ export async function addRideToHistory(
 ): Promise<void> {
   try {
     const riderRef = doc(db, 'riders', riderId);
+    const ride = {
+      ...rideData,
+      date: new Date().toISOString()
+    };
+    
     await updateDoc(riderRef, {
-      rideHistory: [
-        {
-          ...rideData,
-          date: new Date().toISOString()
-        }
-      ],
+      rideHistory: arrayUnion(ride),
       updatedAt: new Date().toISOString()
     });
   } catch (error) {
