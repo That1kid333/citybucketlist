@@ -1,36 +1,46 @@
-import React, { useEffect } from 'react';
+import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { handleAuthCallback } from '../services/googleCalendar';
+import { useAuth } from '../providers/AuthProvider';
+import { checkRedirectResult } from '../lib/auth';
+import { toast } from 'react-hot-toast';
 
 export function GoogleAuthCallback() {
   const navigate = useNavigate();
+  const { user } = useAuth();
 
   useEffect(() => {
-    const processAuth = async () => {
+    const handleRedirect = async () => {
       try {
-        const urlParams = new URLSearchParams(window.location.search);
-        const code = urlParams.get('code');
-        
-        if (!code) {
-          throw new Error('No authorization code found in URL');
+        const result = await checkRedirectResult();
+        if (result) {
+          toast.success('Successfully signed in!');
+          // Handle successful sign-in
+          if (result.additionalUserInfo?.isNewUser) {
+            navigate('/driver/registration');
+          } else {
+            navigate('/driver/portal');
+          }
         }
-
-        await handleAuthCallback(code);
-        window.opener?.postMessage('google-calendar-success', window.location.origin);
-        window.close();
       } catch (error) {
-        console.error('Error processing Google Calendar auth:', error);
-        window.opener?.postMessage('google-calendar-error', window.location.origin);
-        window.close();
+        console.error('Error handling redirect:', error);
+        toast.error('Failed to complete sign-in');
+        navigate('/driver/login');
       }
     };
 
-    processAuth();
-  }, [navigate]);
+    if (!user) {
+      handleRedirect();
+    } else {
+      navigate('/driver/portal');
+    }
+  }, [user, navigate]);
 
   return (
-    <div className="flex items-center justify-center min-h-screen">
-      <p className="text-lg">Processing Google Calendar authentication...</p>
+    <div className="min-h-screen bg-black flex items-center justify-center">
+      <div className="text-white text-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-[#C69249] mx-auto mb-4"></div>
+        <p>Completing sign-in...</p>
+      </div>
     </div>
   );
 }

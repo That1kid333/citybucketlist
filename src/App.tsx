@@ -131,7 +131,11 @@ const router = createBrowserRouter(routes, {
   future: {
     v7_startTransition: true,
     v7_partialHydration: true,
-    v7_skipActionErrorRevalidation: true
+    v7_skipActionErrorRevalidation: true,
+    v7_relativeSplatPath: true,
+    v7_fetcherPersist: true,
+    v7_normalizeFormMethod: true,
+    v7_prependBasename: true
   }
 });
 
@@ -139,28 +143,7 @@ export function App() {
   return (
     <AuthProvider>
       <RouterProvider router={router} />
-      <Toaster 
-        position="top-center"
-        toastOptions={{
-          duration: 4000,
-          style: {
-            background: '#333',
-            color: '#fff',
-          },
-          success: {
-            duration: 3000,
-            style: {
-              background: '#059669',
-            },
-          },
-          error: {
-            duration: 5000,
-            style: {
-              background: '#DC2626',
-            },
-          },
-        }}
-      />
+      <Toaster position="top-center" />
     </AuthProvider>
   );
 }
