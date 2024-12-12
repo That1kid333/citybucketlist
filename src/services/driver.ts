@@ -1,25 +1,28 @@
-import { doc, getDoc } from 'firebase/firestore';
+import { doc, updateDoc, getDoc, getDocs, collection, query, where } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { Driver } from '../types/driver';
 
-export async function getDriverByUid(uid: string): Promise<Driver | null> {
-  console.log('Fetching driver data for UID:', uid);
-  const driverDoc = await getDoc(doc(db, 'drivers', uid));
-  
-  if (!driverDoc.exists()) {
-    console.log('No driver document found for UID:', uid);
-    return null;
-  }
+export async function getDriver(driverId: string): Promise<Driver | null> {
+  const driverRef = doc(db, 'drivers', driverId);
+  const driverSnap = await getDoc(driverRef);
+  return driverSnap.exists() ? driverSnap.data() as Driver : null;
+}
 
-  console.log('Driver document found for UID:', uid);
-  return { id: driverDoc.id, ...driverDoc.data() } as Driver;
+export async function getDriverByEmail(email: string): Promise<Driver | null> {
+  const driversRef = collection(db, 'drivers');
+  const q = query(driversRef, where('email', '==', email));
+  const querySnapshot = await getDocs(q);
+  return !querySnapshot.empty ? querySnapshot.docs[0].data() as Driver : null;
 }
 
 export async function updateDriver(driverId: string, data: Partial<Driver>): Promise<void> {
-  console.log('Updating driver data for ID:', driverId, 'with data:', data);
-  await doc(db, 'drivers', driverId).update({
+  const driverRef = doc(db, 'drivers', driverId);
+  await updateDoc(driverRef, {
     ...data,
-    updatedAt: new Date().toISOString()
+    updated_at: new Date().toISOString()
   });
-  console.log('Driver data updated successfully');
+}
+
+export async function toggleDriverAvailability(driverId: string, available: boolean): Promise<void> {
+  await updateDriver(driverId, { available });
 }

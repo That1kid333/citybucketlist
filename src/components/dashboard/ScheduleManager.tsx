@@ -1,251 +1,106 @@
-import React, { useState, useEffect } from 'react';
-import { Calendar, Clock, Plus, X } from 'lucide-react';
-import { format, startOfWeek, addDays, parseISO } from 'date-fns';
-import { useAuth } from '../../providers/AuthProvider';
-import { db } from '../../lib/firebase';
-import { collection, doc, setDoc, getDocs, deleteDoc, query, where } from 'firebase/firestore';
-import toast from 'react-hot-toast';
+import { useState } from 'react';
+import { Calendar, Clock, Plus } from 'lucide-react';
 
-interface TimeSlot {
-  id: string;
+interface Schedule {
   day: string;
   startTime: string;
   endTime: string;
-  userId: string;
-  title: string;
 }
 
-export function ScheduleManager() {
-  const [availableSlots, setAvailableSlots] = useState<TimeSlot[]>([]);
-  const [showAddSlot, setShowAddSlot] = useState(false);
-  const [newSlot, setNewSlot] = useState<Omit<TimeSlot, 'id' | 'userId'>>({
-    day: 'Monday',
-    startTime: '09:00',
-    endTime: '17:00',
-    title: ''
-  });
-  const [isLoading, setIsLoading] = useState(true);
-  const { user } = useAuth();
+interface ScheduleManagerProps {
+  schedules: Schedule[];
+  onScheduleUpdate: (schedules: Schedule[]) => void;
+}
 
-  useEffect(() => {
-    if (user?.uid) {
-      loadTimeSlots();
-    }
-  }, [user?.uid]);
+export function ScheduleManager({ schedules, onScheduleUpdate }: ScheduleManagerProps) {
+  const [selectedDay, setSelectedDay] = useState<string>('');
+  const [startTime, setStartTime] = useState<string>('');
+  const [endTime, setEndTime] = useState<string>('');
 
-  const loadTimeSlots = async () => {
-    try {
-      setIsLoading(true);
-      const timeSlotsRef = collection(db, 'timeSlots');
-      const q = query(timeSlotsRef, where('userId', '==', user?.uid));
-      const querySnapshot = await getDocs(q);
-      
-      const slots: TimeSlot[] = [];
-      querySnapshot.forEach((doc) => {
-        slots.push({ id: doc.id, ...doc.data() } as TimeSlot);
-      });
-      
-      setAvailableSlots(slots);
-    } catch (error) {
-      console.error('Error loading time slots:', error);
-      toast.error('Failed to load your schedule');
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  const handleAddSchedule = () => {
+    if (!selectedDay || !startTime || !endTime) return;
 
-  const weekDays = Array.from({ length: 7 }, (_, i) => {
-    const date = addDays(startOfWeek(new Date()), i);
-    return format(date, 'EEEE');
-  });
+    const newSchedule: Schedule = {
+      day: selectedDay,
+      startTime,
+      endTime
+    };
 
-  const handleAddSlot = async () => {
-    if (!user?.uid) {
-      toast.error('Please sign in to manage your schedule');
-      return;
-    }
-
-    try {
-      const timeSlotRef = doc(collection(db, 'timeSlots'));
-      const newTimeSlot: TimeSlot = {
-        id: timeSlotRef.id,
-        ...newSlot,
-        userId: user.uid
-      };
-
-      await setDoc(timeSlotRef, {
-        ...newSlot,
-        userId: user.uid,
-        title: newSlot.title,
-        createdAt: new Date().toISOString()
-      });
-      
-      setAvailableSlots(prev => [...prev, newTimeSlot]);
-      toast.success('Time slot added successfully');
-      
-      setShowAddSlot(false);
-      setNewSlot({
-        day: 'Monday',
-        startTime: '09:00',
-        endTime: '17:00',
-        title: ''
-      });
-    } catch (error) {
-      console.error('Error adding time slot:', error);
-      toast.error('Failed to add time slot. Please try again.');
-    }
-  };
-
-  const handleRemoveSlot = async (id: string) => {
-    if (!user?.uid) {
-      toast.error('Please sign in to manage your schedule');
-      return;
-    }
-
-    try {
-      const timeSlotRef = doc(db, 'timeSlots', id);
-      await deleteDoc(timeSlotRef);
-      setAvailableSlots(prev => prev.filter(slot => slot.id !== id));
-      toast.success('Time slot removed successfully');
-    } catch (error) {
-      console.error('Error removing time slot:', error);
-      toast.error('Failed to remove time slot. Please try again.');
-    }
+    onScheduleUpdate([...schedules, newSchedule]);
+    setSelectedDay('');
+    setStartTime('');
+    setEndTime('');
   };
 
   return (
-    <div className="space-y-6">
-      {/* Weekly Calendar View */}
-      <div className="bg-neutral-900 rounded-lg p-6">
-        <div className="flex items-center justify-between mb-6">
-          <h2 className="text-xl font-semibold">Weekly Schedule</h2>
-          <button
-            onClick={() => setShowAddSlot(true)}
-            className="flex items-center gap-2 px-4 py-2 bg-[#F5A623] text-white rounded-lg hover:bg-[#E09612] transition-colors"
-          >
-            <Plus className="w-4 h-4" />
-            Add Time Slot
-          </button>
-        </div>
-
-        {isLoading ? (
-          <div className="flex justify-center items-center h-64">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#F5A623]"></div>
-          </div>
-        ) : (
-          <div className="grid grid-cols-7 gap-4">
-            {weekDays.map((day) => (
-              <div key={day} className="text-center">
-                <div className="font-medium mb-2">{day}</div>
-                <div className="bg-neutral-800 rounded-lg p-3 min-h-[100px]">
-                  {availableSlots
-                    .filter(slot => slot.day === day)
-                    .map(slot => (
-                      <div
-                        key={slot.id}
-                        className="bg-[#F5A623]/10 text-[#F5A623] rounded p-2 mb-2 text-sm group hover:bg-[#F5A623]/20 transition-colors"
-                      >
-                        <div className="flex items-center justify-between">
-                          <span className="font-medium">{slot.title || 'Untitled Event'}</span>
-                          <button
-                            onClick={() => handleRemoveSlot(slot.id)}
-                            className="text-neutral-400 hover:text-white opacity-0 group-hover:opacity-100 transition-opacity"
-                          >
-                            <X className="w-4 h-4" />
-                          </button>
-                        </div>
-                        <div className="text-neutral-400 mt-1">
-                          {format(parseISO(`2000-01-01T${slot.startTime}`), 'h:mm a')} - 
-                          {format(parseISO(`2000-01-01T${slot.endTime}`), 'h:mm a')}
-                        </div>
-                      </div>
-                    ))}
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
+    <div className="bg-neutral-900 rounded-lg p-6">
+      <div className="flex items-center justify-between mb-6">
+        <h3 className="text-lg font-semibold">Schedule Manager</h3>
+        <Calendar className="w-5 h-5 text-[#F5A623]" />
       </div>
 
-      {/* Add Time Slot Modal */}
-      {showAddSlot && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
-          <div className="bg-neutral-900 rounded-lg p-6 w-full max-w-md">
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-semibold">Add Time Slot</h3>
-              <button
-                onClick={() => setShowAddSlot(false)}
-                className="text-neutral-400 hover:text-white"
-              >
-                <X className="w-6 h-6" />
-              </button>
-            </div>
+      <div className="space-y-4">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <select
+            value={selectedDay}
+            onChange={(e) => setSelectedDay(e.target.value)}
+            className="bg-neutral-800 text-white px-4 py-2 rounded-lg border border-neutral-700"
+          >
+            <option value="">Select Day</option>
+            <option value="monday">Monday</option>
+            <option value="tuesday">Tuesday</option>
+            <option value="wednesday">Wednesday</option>
+            <option value="thursday">Thursday</option>
+            <option value="friday">Friday</option>
+            <option value="saturday">Saturday</option>
+            <option value="sunday">Sunday</option>
+          </select>
 
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-neutral-400 mb-1">
-                  Event Title
-                </label>
-                <input
-                  type="text"
-                  value={newSlot.title}
-                  onChange={(e) => setNewSlot(prev => ({ ...prev, title: e.target.value }))}
-                  placeholder="Enter event title"
-                  className="w-full bg-neutral-800 border border-neutral-700 rounded-lg px-4 py-2"
-                />
-              </div>
+          <div className="flex items-center space-x-2">
+            <Clock className="w-5 h-5 text-[#F5A623]" />
+            <input
+              type="time"
+              value={startTime}
+              onChange={(e) => setStartTime(e.target.value)}
+              className="bg-neutral-800 text-white px-4 py-2 rounded-lg border border-neutral-700"
+            />
+          </div>
 
-              <div>
-                <label className="block text-sm font-medium text-neutral-400 mb-1">
-                  Day
-                </label>
-                <select
-                  value={newSlot.day}
-                  onChange={(e) => setNewSlot(prev => ({ ...prev, day: e.target.value }))}
-                  className="w-full bg-neutral-800 border border-neutral-700 rounded-lg px-4 py-2"
-                >
-                  {weekDays.map(day => (
-                    <option key={day} value={day}>{day}</option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-neutral-400 mb-1">
-                    Start Time
-                  </label>
-                  <input
-                    type="time"
-                    value={newSlot.startTime}
-                    onChange={(e) => setNewSlot(prev => ({ ...prev, startTime: e.target.value }))}
-                    className="w-full bg-neutral-800 border border-neutral-700 rounded-lg px-4 py-2"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-neutral-400 mb-1">
-                    End Time
-                  </label>
-                  <input
-                    type="time"
-                    value={newSlot.endTime}
-                    onChange={(e) => setNewSlot(prev => ({ ...prev, endTime: e.target.value }))}
-                    className="w-full bg-neutral-800 border border-neutral-700 rounded-lg px-4 py-2"
-                  />
-                </div>
-              </div>
-
-              <button
-                onClick={handleAddSlot}
-                className="w-full py-2 bg-[#F5A623] text-white rounded-lg hover:bg-[#E09612] transition-colors"
-              >
-                Add Time Slot
-              </button>
-            </div>
+          <div className="flex items-center space-x-2">
+            <Clock className="w-5 h-5 text-[#F5A623]" />
+            <input
+              type="time"
+              value={endTime}
+              onChange={(e) => setEndTime(e.target.value)}
+              className="bg-neutral-800 text-white px-4 py-2 rounded-lg border border-neutral-700"
+            />
           </div>
         </div>
-      )}
+
+        <button
+          onClick={handleAddSchedule}
+          className="w-full px-4 py-2 bg-[#F5A623] text-white rounded-lg hover:bg-[#E09612] transition-colors flex items-center justify-center space-x-2"
+        >
+          <Plus className="w-5 h-5" />
+          <span>Add Schedule</span>
+        </button>
+      </div>
+
+      <div className="mt-6 space-y-4">
+        {schedules.map((schedule, index) => (
+          <div
+            key={index}
+            className="flex items-center justify-between bg-neutral-800 p-4 rounded-lg"
+          >
+            <div>
+              <div className="font-semibold capitalize">{schedule.day}</div>
+              <div className="text-sm text-neutral-400">
+                {schedule.startTime} - {schedule.endTime}
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }

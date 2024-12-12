@@ -1,22 +1,13 @@
-import { useState, useEffect } from 'react';
+import { useEffect } from 'react';
 import { 
   Clock, 
   Car, 
   Star, 
-  Timer, 
-  Coffee, 
-  AlertTriangle, 
-  HelpCircle, 
-  LogOut,
+  Timer,
   Calendar,
   BellRing
 } from 'lucide-react';
 import { Driver } from '../../types/driver';
-import { useNavigate } from 'react-router-dom';
-import { doc, updateDoc } from 'firebase/firestore';
-import { db } from '../../lib/firebase';
-import { toast } from 'react-hot-toast';
-import { format } from 'date-fns';
 
 interface OverviewProps {
   driver: Driver;
@@ -25,98 +16,12 @@ interface OverviewProps {
 }
 
 export function Overview({ driver, isOnline, onToggleOnline }: OverviewProps) {
-  const navigate = useNavigate();
-  const [isBreak, setIsBreak] = useState(false);
-  const [breakStartTime, setBreakStartTime] = useState<Date | null>(null);
-  const [earnings, setEarnings] = useState({
-    today: 0,
-    week: 0,
-    month: 0
-  });
-
-  useEffect(() => {
-    // Simulate loading earnings data
-    setEarnings({
-      today: 245.50,
-      week: 1234.75,
-      month: 4567.80
-    });
-  }, []);
-
   useEffect(() => {
     // Load initial online status from driver data
     if (driver?.available !== undefined) {
       onToggleOnline(driver.available);
     }
-  }, [driver?.available]);
-
-  const handleToggleOnline = async () => {
-    try {
-      const newStatus = !isOnline;
-      
-      // Update Firestore first
-      await updateDoc(doc(db, 'drivers', driver.id), {
-        available: newStatus,
-        updated_at: new Date().toISOString()
-      });
-
-      // If Firestore update succeeds, update local state
-      onToggleOnline(newStatus);
-      
-      toast.success(newStatus ? 'You are now online and available for rides' : 'You are now offline');
-    } catch (error) {
-      console.error('Error toggling online status:', error);
-      toast.error('Failed to update status. Please try again.');
-    }
-  };
-
-  const handleToggleBreak = async () => {
-    try {
-      const newBreakStatus = !isBreak;
-      setIsBreak(newBreakStatus);
-      
-      if (newBreakStatus) {
-        setBreakStartTime(new Date());
-      } else {
-        setBreakStartTime(null);
-      }
-
-      await updateDoc(doc(db, 'drivers', driver.id), {
-        onBreak: newBreakStatus,
-        breakStartTime: newBreakStatus ? new Date().toISOString() : null
-      });
-
-      toast.success(newBreakStatus ? 'Break started' : 'Break ended');
-    } catch (error) {
-      console.error('Error updating break status:', error);
-      toast.error('Failed to update status');
-    }
-  };
-
-  const handleEmergency = () => {
-    // TODO: Implement emergency contact system
-    toast.error('Emergency services contacted');
-  };
-
-  const handleSupport = () => {
-    navigate('/support');
-  };
-
-  const handleEndShift = async () => {
-    try {
-      await updateDoc(doc(db, 'drivers', driver.id), {
-        available: false,
-        lastShiftEnd: new Date().toISOString()
-      });
-      
-      onToggleOnline(false);
-
-      toast.success('Shift ended successfully');
-    } catch (error) {
-      console.error('Error ending shift:', error);
-      toast.error('Failed to end shift');
-    }
-  };
+  }, [driver?.available, onToggleOnline]);
 
   return (
     <div className="space-y-6">
@@ -199,72 +104,20 @@ export function Overview({ driver, isOnline, onToggleOnline }: OverviewProps) {
         </div>
       </div>
 
-      {/* Earnings Summary */}
-      <div className="bg-neutral-900 rounded-lg p-6">
-        <h3 className="text-lg font-semibold text-white mb-4">Earnings Summary</h3>
-        <div className="grid grid-cols-3 gap-4">
-          <div>
-            <p className="text-sm text-gray-400">Today</p>
-            <p className="text-xl font-bold text-[#F5A623]">
-              ${earnings.today.toFixed(2)}
-            </p>
+      {/* Schedule Overview */}
+      <div className="bg-neutral-900 rounded-lg p-4">
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center space-x-2 text-[#F5A623]">
+            <Calendar className="w-5 h-5" />
+            <span className="text-sm font-medium">Next Shift</span>
           </div>
-          <div>
-            <p className="text-sm text-gray-400">This Week</p>
-            <p className="text-xl font-bold text-[#F5A623]">
-              ${earnings.week.toFixed(2)}
-            </p>
-          </div>
-          <div>
-            <p className="text-sm text-gray-400">This Month</p>
-            <p className="text-xl font-bold text-[#F5A623]">
-              ${earnings.month.toFixed(2)}
-            </p>
-          </div>
+          <BellRing className="w-5 h-5 text-[#F5A623]" />
         </div>
-      </div>
-
-      {/* Additional Info Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {/* Upcoming Schedule */}
-        <div className="bg-neutral-900 rounded-lg p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-semibold text-white">Upcoming Schedule</h3>
-            <Calendar className="w-5 h-5 text-[#F5A623]" />
-          </div>
-          <div className="space-y-3">
-            {driver.schedule ? (
-              driver.schedule.map((shift, index) => (
-                <div key={index} className="flex items-center justify-between text-sm">
-                  <span className="text-gray-400">{shift.day}</span>
-                  <span className="text-white">{shift.hours}</span>
-                </div>
-              ))
-            ) : (
-              <p className="text-gray-400 text-sm">No upcoming shifts</p>
-            )}
-          </div>
-        </div>
-
-        {/* Recent Activity */}
-        <div className="bg-neutral-900 rounded-lg p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-semibold text-white">Recent Activity</h3>
-            <BellRing className="w-5 h-5 text-[#F5A623]" />
-          </div>
-          <div className="space-y-3">
-            {driver.recentActivity ? (
-              driver.recentActivity.map((activity, index) => (
-                <div key={index} className="flex items-center justify-between text-sm">
-                  <span className="text-gray-400">{activity.action}</span>
-                  <span className="text-white">{activity.time}</span>
-                </div>
-              ))
-            ) : (
-              <p className="text-gray-400 text-sm">No recent activity</p>
-            )}
-          </div>
-        </div>
+        <p className="text-white">
+          {driver.schedule?.length 
+            ? `Next shift starts at ${driver.schedule[0].hours}`
+            : 'No upcoming shifts scheduled'}
+        </p>
       </div>
     </div>
   );

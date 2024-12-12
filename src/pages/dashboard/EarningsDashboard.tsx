@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { Header } from '../../components/Header';
 import { EarningsCenter } from '../../components/dashboard/EarningsCenter';
 import { SubscriptionManagement } from '../../components/dashboard/SubscriptionManagement';

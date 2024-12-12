@@ -1,7 +1,6 @@
-import React from 'react';
-import { createBrowserRouter, RouterProvider, Navigate } from 'react-router-dom';
+import { createBrowserRouter, RouterProvider } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
-import { AuthProvider } from './providers/AuthProvider';
+import { AuthProvider, useAuth } from './providers/AuthProvider';
 import BookingPage from './pages/BookingPage';
 import DriversPage from './pages/DriversPage';
 import DriverPortal from './pages/DriverPortal';
@@ -12,13 +11,24 @@ import DriverRegistration from './pages/DriverRegistration';
 import DriverSignup from './pages/DriverSignup';
 import DriverTutorialPage from './pages/DriverTutorialPage';
 import FindDrivers from './pages/FindDrivers';
-import { OnboardingFlow } from './pages/onboarding/OnboardingFlow';
+import OnboardingFlow from './pages/onboarding/OnboardingFlow';
 import { EarningsDashboard } from './pages/dashboard/EarningsDashboard';
 import { ThankYouPage } from './pages/ThankYouPage';
 import ProtectedRoute from './components/ProtectedRoute';
 import { ManageRiders } from './pages/ManageRiders';
 import { GoogleAuthCallback } from './components/GoogleAuthCallback';
 import { Messages } from './components/messages/Messages';
+
+function MessagesRoute() {
+  const { user, driver, rider } = useAuth();
+  const userType = driver ? 'driver' : rider ? 'rider' : 'admin';
+  
+  return (
+    <ProtectedRoute userType="any">
+      <Messages user={user!} userType={userType} />
+    </ProtectedRoute>
+  );
+}
 
 const routes = [
   {
@@ -34,10 +44,10 @@ const routes = [
     element: <DriversPage />,
   },
   {
-    path: "/find-drivers",
+    path: "/driver/portal",
     element: (
-      <ProtectedRoute requiresRider={true}>
-        <FindDrivers />
+      <ProtectedRoute userType="driver">
+        <DriverPortal />
       </ProtectedRoute>
     ),
   },
@@ -46,82 +56,58 @@ const routes = [
     element: <DriverLogin />,
   },
   {
-    path: "/rider/login",
-    element: <RiderLogin />,
-  },
-  {
     path: "/driver/signup",
     element: <DriverSignup />,
   },
   {
     path: "/driver/registration",
-    element: (
-      <ProtectedRoute>
-        <DriverRegistration />
-      </ProtectedRoute>
-    ),
+    element: <DriverRegistration />,
   },
   {
-    path: "/driver/portal",
+    path: "/driver/onboarding",
     element: (
-      <ProtectedRoute requiresDriver={true}>
-        <DriverPortal />
-      </ProtectedRoute>
-    ),
-  },
-  {
-    path: "/driver/portal/*",
-    element: (
-      <ProtectedRoute requiresDriver={true}>
-        <DriverPortal />
-      </ProtectedRoute>
-    ),
-  },
-  {
-    path: "/rider/portal/*",
-    element: (
-      <ProtectedRoute requiresRider={true}>
-        <RiderPortal />
+      <ProtectedRoute userType="driver">
+        <OnboardingFlow />
       </ProtectedRoute>
     ),
   },
   {
     path: "/driver/tutorial",
     element: (
-      <ProtectedRoute requiresDriver={true}>
+      <ProtectedRoute userType="driver">
         <DriverTutorialPage />
-      </ProtectedRoute>
-    ),
-  },
-  {
-    path: "/driver/onboarding",
-    element: (
-      <ProtectedRoute requiresDriver={true}>
-        <OnboardingFlow />
       </ProtectedRoute>
     ),
   },
   {
     path: "/driver/earnings",
     element: (
-      <ProtectedRoute requiresDriver={true}>
+      <ProtectedRoute userType="driver">
         <EarningsDashboard />
       </ProtectedRoute>
     ),
   },
   {
-    path: "/driver/riders",
+    path: "/rider/portal",
     element: (
-      <ProtectedRoute requiresDriver={true}>
-        <ManageRiders />
+      <ProtectedRoute userType="rider">
+        <RiderPortal />
       </ProtectedRoute>
     ),
   },
   {
-    path: "/driver/messages",
+    path: "/rider/login",
+    element: <RiderLogin />,
+  },
+  {
+    path: "/find-drivers",
+    element: <FindDrivers />,
+  },
+  {
+    path: "/manage-riders",
     element: (
-      <ProtectedRoute requiresDriver={true}>
-        <Messages />
+      <ProtectedRoute userType="admin">
+        <ManageRiders />
       </ProtectedRoute>
     ),
   },
@@ -130,24 +116,18 @@ const routes = [
     element: <GoogleAuthCallback />,
   },
   {
-    path: "*",
-    element: <Navigate to="/" replace />,
+    path: "/messages",
+    element: <MessagesRoute />,
   },
 ];
 
 const router = createBrowserRouter(routes, {
   future: {
-    v7_startTransition: true,
-    v7_partialHydration: true,
-    v7_skipActionErrorRevalidation: true,
-    v7_relativeSplatPath: true,
-    v7_fetcherPersist: true,
     v7_normalizeFormMethod: true,
-    v7_prependBasename: true
   }
 });
 
-export function App() {
+export default function App() {
   return (
     <AuthProvider>
       <RouterProvider router={router} />

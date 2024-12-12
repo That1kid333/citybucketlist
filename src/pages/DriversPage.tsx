@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { Header } from '../components/Header';
 import { Phone, MapPin } from 'lucide-react';
 import { LocationSelector } from '../components/LocationSelector';
@@ -6,30 +6,8 @@ import { locations } from '../types/location';
 import { DriverDetailsModal } from '../components/DriverDetailsModal';
 import { collection, query, where, getDocs } from 'firebase/firestore';
 import { db } from '../lib/firebase';
-import { Driver } from '../types/driver';
+import type { Driver } from '../types/driver';
 import { toast } from 'react-hot-toast';
-
-interface Driver {
-  id: string;
-  name: string;
-  image: string;
-  rating: number;
-  phone: string;
-  available: boolean;
-  locationId: string;
-  pricing: {
-    baseRate: number;
-    perMile: number;
-    minimumFare: number;
-    airportFare: number;
-  };
-  car: {
-    make: string;
-    model: string;
-    year: string;
-    color: string;
-  };
-}
 
 function DriversPage() {
   const [selectedDriver, setSelectedDriver] = useState<Driver | null>(null);
@@ -70,7 +48,7 @@ function DriversPage() {
     setSelectedDriver(driver);
   };
 
-  const handleDriverSelect = async (driver: Driver) => {
+  const handleSelectDriver = async (driver: Driver) => {
     setSelectedDriver(null);
     setShowConfirmation(true);
     // Additional logic for ride request can be added here
@@ -80,7 +58,6 @@ function DriversPage() {
     window.location.href = `tel:${phone}`;
   };
 
-  const currentLocation = locations.find(loc => loc.id === selectedLocation);
   const filteredDrivers = drivers.filter(driver => 
     driver.available && driver.locationId === selectedLocation
   );
@@ -93,6 +70,7 @@ function DriversPage() {
         <div className="mb-8">
           <h1 className="text-3xl font-bold mb-4">Available Drivers</h1>
           <LocationSelector
+            locations={locations}
             selectedLocation={selectedLocation}
             onLocationChange={setSelectedLocation}
           />
@@ -117,9 +95,9 @@ function DriversPage() {
               >
                 <div className="flex items-center space-x-4 mb-4">
                   <div className="w-16 h-16 rounded-full overflow-hidden bg-neutral-800">
-                    {driver.image ? (
+                    {driver.photoURL ? (
                       <img
-                        src={driver.image}
+                        src={driver.photoURL}
                         alt={driver.name}
                         className="w-full h-full object-cover"
                       />
@@ -147,28 +125,26 @@ function DriversPage() {
                   </div>
                   <div>
                     <p className="text-neutral-400">Response Time</p>
-                    <p className="font-semibold">{driver.car.year}</p>
+                    <p className="font-semibold">{driver.responseTime || 'N/A'}</p>
                   </div>
                 </div>
 
-                <div className="mt-4 grid grid-cols-2 gap-2 bg-neutral-800 p-3 rounded-lg mb-4">
-                  <div>
-                    <div className="text-neutral-400 text-sm">Base Rate</div>
-                    <div className="font-semibold">${driver.pricing.baseRate}</div>
+                {driver.vehicle && (
+                  <div className="mt-4 grid grid-cols-2 gap-2 bg-neutral-800 p-3 rounded-lg mb-4">
+                    <div>
+                      <div className="text-neutral-400 text-sm">Vehicle</div>
+                      <div className="font-semibold">{driver.vehicle.make} {driver.vehicle.model}</div>
+                    </div>
+                    <div>
+                      <div className="text-neutral-400 text-sm">Year</div>
+                      <div className="font-semibold">{driver.vehicle.year}</div>
+                    </div>
+                    <div>
+                      <div className="text-neutral-400 text-sm">Color</div>
+                      <div className="font-semibold">{driver.vehicle.color}</div>
+                    </div>
                   </div>
-                  <div>
-                    <div className="text-neutral-400 text-sm">Per Mile</div>
-                    <div className="font-semibold">${driver.pricing.perMile}</div>
-                  </div>
-                  <div>
-                    <div className="text-neutral-400 text-sm">Min Fare</div>
-                    <div className="font-semibold">${driver.pricing.minimumFare}</div>
-                  </div>
-                  <div>
-                    <div className="text-neutral-400 text-sm">Airport</div>
-                    <div className="font-semibold">${driver.pricing.airportFare}</div>
-                  </div>
-                </div>
+                )}
 
                 <div className="flex flex-col space-y-2 sm:flex-row sm:space-y-0 sm:space-x-2">
                   <button
@@ -177,12 +153,14 @@ function DriversPage() {
                   >
                     Select Driver
                   </button>
-                  <button
-                    onClick={() => handleCallDriver(driver.phone)}
-                    className="px-4 py-2 bg-neutral-800 text-white rounded-lg hover:bg-neutral-700 transition-colors w-full sm:w-auto"
-                  >
-                    <Phone className="w-5 h-5 mx-auto" />
-                  </button>
+                  {driver.phone && (
+                    <button
+                      onClick={() => handleCallDriver(driver.phone!)}
+                      className="px-4 py-2 bg-neutral-800 text-white rounded-lg hover:bg-neutral-700 transition-colors w-full sm:w-auto"
+                    >
+                      <Phone className="w-5 h-5 mx-auto" />
+                    </button>
+                  )}
                 </div>
               </div>
             ))}
@@ -194,20 +172,20 @@ function DriversPage() {
         <DriverDetailsModal
           driver={selectedDriver}
           onClose={() => setSelectedDriver(null)}
-          onSelect={handleDriverSelect}
+          onSelect={handleSelectDriver}
         />
       )}
 
       {showConfirmation && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-neutral-900 rounded-lg p-6 max-w-md w-full text-center">
-            <h3 className="text-xl font-semibold mb-4">Request Sent!</h3>
-            <p className="text-neutral-400 mb-6">
-              Your request has been sent to the driver. They will respond shortly.
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4">
+          <div className="bg-neutral-900 p-6 rounded-lg max-w-md w-full">
+            <h3 className="text-xl font-bold mb-4">Driver Selected</h3>
+            <p className="text-neutral-400">
+              Your request has been sent to the driver. They will contact you shortly.
             </p>
             <button
               onClick={() => setShowConfirmation(false)}
-              className="bg-[#F5A623] text-white py-2 px-4 rounded-lg hover:bg-[#E09612] transition-colors"
+              className="mt-4 w-full px-4 py-2 bg-[#F5A623] text-white rounded-lg hover:bg-[#E09612] transition-colors"
             >
               Close
             </button>

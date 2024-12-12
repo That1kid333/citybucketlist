@@ -1,26 +1,14 @@
-import React from 'react';
-import { Navigate, useLocation } from 'react-router-dom';
+import { ReactNode } from 'react';
+import { Navigate } from 'react-router-dom';
 import { useAuth } from '../providers/AuthProvider';
 
-interface ProtectedRouteProps {
-  children: React.ReactNode;
-  requiresDriver?: boolean;
-  requiresRider?: boolean;
+export interface ProtectedRouteProps {
+  children: ReactNode;
+  userType: 'driver' | 'rider' | 'admin' | 'any';
 }
 
-function ProtectedRoute({ children, requiresDriver = false, requiresRider = false }: ProtectedRouteProps) {
+export default function ProtectedRoute({ children, userType }: ProtectedRouteProps) {
   const { user, driver, rider, loading } = useAuth();
-  const location = useLocation();
-
-  console.log('ProtectedRoute:', {
-    pathname: location.pathname,
-    requiresDriver,
-    requiresRider,
-    hasUser: !!user,
-    hasDriver: !!driver,
-    hasRider: !!rider,
-    loading
-  });
 
   if (loading) {
     return (
@@ -31,29 +19,20 @@ function ProtectedRoute({ children, requiresDriver = false, requiresRider = fals
   }
 
   if (!user) {
-    console.log('No user, redirecting to login');
-    // Redirect to appropriate login page based on the route
-    const isDriverRoute = location.pathname.startsWith('/driver');
-    return <Navigate to={isDriverRoute ? '/driver/login' : '/rider/login'} state={{ from: location }} replace />;
+    return <Navigate to={`/${userType}/login`} replace />;
   }
 
-  // Handle driver-specific routes
-  if (requiresDriver) {
-    if (!driver && location.pathname !== '/driver/registration') {
-      console.log('Driver required but not found, redirecting to registration');
-      return <Navigate to="/driver/registration" state={{ from: location }} replace />;
-    }
+  if (userType === 'driver' && !driver) {
+    return <Navigate to="/driver/registration" replace />;
   }
 
-  // Handle rider-specific routes
-  if (requiresRider) {
-    if (!rider && location.pathname !== '/rider/registration') {
-      console.log('Rider required but not found, redirecting to registration');
-      return <Navigate to="/rider/registration" state={{ from: location }} replace />;
-    }
+  if (userType === 'rider' && !rider) {
+    return <Navigate to="/rider/registration" replace />;
+  }
+
+  if (userType === 'admin' && !user.email?.endsWith('@company.com')) {
+    return <Navigate to="/" replace />;
   }
 
   return <>{children}</>;
 }
-
-export default ProtectedRoute;

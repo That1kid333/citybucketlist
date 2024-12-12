@@ -6,9 +6,12 @@ import { DocumentUpload } from '../../components/onboarding/DocumentUpload';
 import { SubscriptionPlan } from '../../components/onboarding/SubscriptionPlan';
 import { PersonalInfoForm } from '../../components/onboarding/PersonalInfoForm';
 import { VehicleInfoForm } from '../../components/onboarding/VehicleInfoForm';
-import { storage } from '../../lib/firebase';
 import { uploadFile, getStoragePath } from '../../lib/utils/storage';
-import { Driver, initialDriver } from '../../types/driver';
+import { Driver } from '../../types/driver';
+import { useAuth } from '../../providers/AuthProvider';
+import { doc, setDoc } from 'firebase/firestore';
+import { db } from '../../lib/firebase';
+import { toast } from 'react-hot-toast';
 
 const STEPS = [
   {
@@ -29,212 +32,149 @@ const STEPS = [
   {
     id: 'subscription',
     title: 'Elite Membership',
-    description: 'Join our premium drivers program'
-  },
-  {
-    id: 'review',
-    title: 'Review & Submit',
-    description: 'Final review of your application'
+    description: 'Choose your subscription plan'
   }
 ];
 
-export function OnboardingFlow() {
+export default function OnboardingFlow() {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [currentStep, setCurrentStep] = useState(0);
-  const [isLoading, setIsLoading] = useState(false);
-  const [driver, setDriver] = useState<Driver>(initialDriver);
+  const [driver, setDriver] = useState<Partial<Driver>>({
+    id: user?.uid || '',
+    name: user?.displayName || '',
+    email: user?.email || '',
+    photoURL: user?.photoURL || '',
+    isActive: true,
+    available: false,
+    rating: 5.0,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString()
+  });
 
-  const steps = STEPS.map((step, index) => ({
-    ...step,
-    completed: index < currentStep,
-    current: index === currentStep
-  }));
+  const handlePersonalInfo = async (data: Partial<Driver>) => {
+    setDriver(prev => ({ ...prev, ...data }));
+    setCurrentStep(1);
+  };
 
-  const handleDriverUpdate = (updates: Partial<Driver>) => {
+  const handleDocuments = async (
+    licenseFile: File,
+    backgroundCheckFile: File
+  ) => {
+    try {
+      // Upload driver's license
+      const licensePath = getStoragePath('licenses', user?.uid || '', licenseFile.name);
+      const licenseUrl = await uploadFile(licenseFile, licensePath);
+
+      // Upload background check
+      const backgroundPath = getStoragePath('background-checks', user?.uid || '', backgroundCheckFile.name);
+      const backgroundUrl = await uploadFile(backgroundCheckFile, backgroundPath);
+
+      setDriver(prev => ({
+        ...prev,
+        driversLicense: {
+          number: '',
+          expirationDate: new Date().toISOString(),
+          documentUrl: licenseUrl
+        },
+        backgroundCheck: {
+          status: 'pending',
+          submissionDate: new Date().toISOString(),
+          documentUrl: backgroundUrl
+        }
+      }));
+      setCurrentStep(2);
+    } catch (error) {
+      console.error('Error uploading documents:', error);
+      toast.error('Failed to upload documents. Please try again.');
+    }
+  };
+
+  const handleVehicleInfo = async (vehicleData: Driver['vehicle']) => {
+    if (!vehicleData) return;
     setDriver(prev => ({
       ...prev,
-      ...updates,
-      updated_at: new Date().toISOString()
+      vehicle: vehicleData
     }));
+    setCurrentStep(3);
   };
 
-  const handlePhotoUpload = async (file: File) => {
+  const handleSubscription = async (plan: string) => {
     try {
-      const path = getStoragePath('profile', driver.id, `profile_${Date.now()}.${file.name.split('.').pop()}`);
-      const url = await uploadFile(file, path);
-      handleDriverUpdate({ photo: url });
-    } catch (error) {
-      console.error('Error uploading photo:', error);
-    }
-  };
+      const subscriptionData = {
+        status: 'trial',
+        plan: 'elite',
+        startDate: new Date().toISOString(),
+        trialEndDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+        nextBillingDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
+      } as const;
 
-  const handleDocumentUpload = async (file: File, type: string) => {
-    try {
-      const path = getStoragePath(
-        'document',
-        driver.id,
-        `${type}_${Date.now()}.${file.name.split('.').pop()}`
-      );
-      const url = await uploadFile(file, path);
+      setDriver(prev => ({
+        ...prev,
+        subscription: subscriptionData
+      }));
 
-      if (type === 'driversLicense') {
-        handleDriverUpdate({
-          driversLicense: {
-            ...driver.driversLicense,
-            documentUrl: url
-          }
+      // Save complete driver data
+      if (user?.uid) {
+        const driverRef = doc(db, 'drivers', user.uid);
+        await setDoc(driverRef, {
+          ...driver,
+          updated_at: new Date().toISOString()
         });
-      } else if (type === 'backgroundCheck') {
-        handleDriverUpdate({
-          backgroundCheck: {
-            ...driver.backgroundCheck,
-            documentUrl: url
-          }
-        });
+        toast.success('Registration completed successfully!');
+        navigate('/driver/tutorial');
       }
     } catch (error) {
-      console.error('Error uploading document:', error);
+      console.error('Error saving driver data:', error);
+      toast.error('Failed to complete registration. Please try again.');
     }
   };
 
-  const handleSubscribe = async () => {
-    setIsLoading(true);
-    try {
-      handleDriverUpdate({
-        subscription: {
-          status: 'active',
-          plan: 'elite',
-          startDate: new Date().toISOString(),
-          nextBillingDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
-        }
-      });
-      setCurrentStep(prev => prev + 1);
-    } catch (error) {
-      console.error('Subscription error:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleSubmit = async () => {
-    setIsLoading(true);
-    try {
-      // Final submission will be handled by auth service during registration
-      navigate('/driver/dashboard');
-    } catch (error) {
-      console.error('Error submitting application:', error);
-    } finally {
-      setIsLoading(false);
+  const renderStep = () => {
+    switch (currentStep) {
+      case 0:
+        return (
+          <PersonalInfoForm
+            initialData={driver}
+            onSubmit={handlePersonalInfo}
+          />
+        );
+      case 1:
+        return (
+          <DocumentUpload
+            onSubmit={handleDocuments}
+            driverLicenseUrl={driver.driversLicense?.documentUrl}
+            backgroundCheckUrl={driver.backgroundCheck?.documentUrl}
+          />
+        );
+      case 2:
+        return (
+          <VehicleInfoForm
+            initialData={driver.vehicle}
+            onSubmit={handleVehicleInfo}
+          />
+        );
+      case 3:
+        return (
+          <SubscriptionPlan
+            onSubmit={handleSubscription}
+          />
+        );
+      default:
+        return null;
     }
   };
 
   return (
-    <div className="min-h-screen bg-black text-white">
+    <div className="min-h-screen bg-black">
       <Header />
-      
       <main className="container mx-auto px-4 py-8">
-        <div className="max-w-3xl mx-auto">
-          <h1 className="text-4xl font-bold text-[#F5A623] mb-8">
-            Driver Application
-          </h1>
-
-          <OnboardingProgress steps={steps} />
-
-          <div className="mt-8">
-            {currentStep === 0 && (
-              <PersonalInfoForm
-                driver={driver}
-                onChange={handleDriverUpdate}
-                onPhotoUpload={handlePhotoUpload}
-              />
-            )}
-
-            {currentStep === 1 && (
-              <div className="space-y-6">
-                <DocumentUpload
-                  label="Driver's License"
-                  accept={{ 'image/*': ['.jpeg', '.jpg', '.png'] }}
-                  onUpload={(file) => handleDocumentUpload(file, 'driversLicense')}
-                  isUploaded={!!driver.driversLicense.documentUrl}
-                />
-                
-                <DocumentUpload
-                  label="Background Check Consent"
-                  accept={{ 'application/pdf': ['.pdf'] }}
-                  onUpload={(file) => handleDocumentUpload(file, 'backgroundCheck')}
-                  isUploaded={!!driver.backgroundCheck.documentUrl}
-                />
-              </div>
-            )}
-
-            {currentStep === 2 && (
-              <VehicleInfoForm
-                driver={driver}
-                onChange={handleDriverUpdate}
-              />
-            )}
-
-            {currentStep === 3 && (
-              <SubscriptionPlan
-                onSubscribe={handleSubscribe}
-                isLoading={isLoading}
-              />
-            )}
-
-            {currentStep === 4 && (
-              <div className="space-y-6">
-                <div className="bg-neutral-900 rounded-lg p-6">
-                  <h2 className="text-xl font-semibold mb-4">Application Review</h2>
-                  <div className="space-y-4">
-                    <div>
-                      <h3 className="font-medium text-[#F5A623]">Personal Information</h3>
-                      <p>Name: {driver.name}</p>
-                      <p>Email: {driver.email}</p>
-                      <p>Phone: {driver.phone}</p>
-                    </div>
-                    
-                    <div>
-                      <h3 className="font-medium text-[#F5A623]">Vehicle Information</h3>
-                      <p>{driver.vehicle.year} {driver.vehicle.make} {driver.vehicle.model}</p>
-                      <p>License Plate: {driver.vehicle.plate}</p>
-                    </div>
-
-                    <div>
-                      <h3 className="font-medium text-[#F5A623]">Documents</h3>
-                      <p>Driver's License: {driver.driversLicense.documentUrl ? '✓ Uploaded' : '✗ Missing'}</p>
-                      <p>Background Check: {driver.backgroundCheck.documentUrl ? '✓ Uploaded' : '✗ Missing'}</p>
-                    </div>
-                  </div>
-                  
-                  <button
-                    onClick={handleSubmit}
-                    disabled={isLoading}
-                    className="w-full mt-6 py-3 bg-[#F5A623] text-white rounded-lg font-semibold hover:bg-[#E09612] transition-colors disabled:opacity-50"
-                  >
-                    {isLoading ? "Submitting..." : "Submit Application"}
-                  </button>
-                </div>
-              </div>
-            )}
-
-            {currentStep < 4 && (
-              <div className="flex justify-between mt-8">
-                <button
-                  onClick={() => setCurrentStep(prev => prev - 1)}
-                  disabled={currentStep === 0}
-                  className="px-6 py-2 bg-neutral-800 text-white rounded-lg hover:bg-neutral-700 transition-colors disabled:opacity-50"
-                >
-                  Back
-                </button>
-                <button
-                  onClick={() => setCurrentStep(prev => prev + 1)}
-                  className="px-6 py-2 bg-[#F5A623] text-white rounded-lg hover:bg-[#E09612] transition-colors"
-                >
-                  Continue
-                </button>
-              </div>
-            )}
-          </div>
+        <OnboardingProgress
+          steps={STEPS}
+          currentStep={currentStep}
+        />
+        <div className="mt-8">
+          {renderStep()}
         </div>
       </main>
     </div>

@@ -1,6 +1,4 @@
-import React from 'react';
 import { DollarSign, TrendingUp, Calendar, CreditCard } from 'lucide-react';
-import { format } from 'date-fns';
 
 interface EarningsSummary {
   today: number;
@@ -11,22 +9,12 @@ interface EarningsSummary {
   commission: number;
 }
 
-const defaultEarnings: EarningsSummary = {
-  today: 0,
-  week: 0,
-  month: 0,
-  total: 0,
-  rides: 0,
-  commission: 20
-};
+interface EarningsCenterProps {
+  earnings: EarningsSummary;
+  onUpdatePayment: () => void;
+}
 
-export function EarningsCenter() {
-  const [earnings] = React.useState<EarningsSummary>(defaultEarnings);
-
-  const handleUpdatePayment = () => {
-    // Implement payment update logic
-  };
-
+export function EarningsCenter({ earnings, onUpdatePayment }: EarningsCenterProps) {
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -57,55 +45,52 @@ export function EarningsCenter() {
         <div className="bg-neutral-900 rounded-lg p-4">
           <div className="flex items-center justify-between mb-2">
             <span className="text-neutral-400">Total Earnings</span>
-            <DollarSign className="w-5 h-5 text-[#F5A623]" />
+            <TrendingUp className="w-5 h-5 text-[#F5A623]" />
           </div>
           <div className="text-2xl font-bold">${earnings.total.toFixed(2)}</div>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="bg-neutral-900 rounded-lg p-6">
-          <h3 className="text-lg font-semibold mb-4">Commission Structure</h3>
-          <div className="space-y-4">
-            <div className="flex justify-between items-center">
-              <span>Standard Rate</span>
-              <span className="text-[#F5A623]">20%</span>
-            </div>
-            <div className="flex justify-between items-center">
-              <span>Elite Member Rate</span>
-              <span className="text-green-500">15%</span>
-            </div>
-            <div className="flex justify-between items-center">
-              <span>Your Current Rate</span>
-              <span className="text-2xl font-bold text-[#F5A623]">
-                {earnings.commission}%
-              </span>
-            </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="bg-neutral-900 rounded-lg p-4">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-neutral-400">Total Rides</span>
+            <div className="text-[#F5A623]">{earnings.rides}</div>
+          </div>
+          <div className="text-sm text-neutral-500">
+            Lifetime completed rides
           </div>
         </div>
 
-        <div className="bg-neutral-900 rounded-lg p-6">
-          <h3 className="text-lg font-semibold mb-4">Direct Deposit Settings</h3>
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="font-medium">Weekly Deposits</p>
-                <p className="text-sm text-neutral-400">
-                  Every Monday at 12:00 AM
-                </p>
-              </div>
-              <button
-                onClick={handleUpdatePayment}
-                className="flex items-center gap-2 px-4 py-2 bg-[#F5A623] text-white rounded-lg hover:bg-[#E09612] transition-colors"
-              >
-                <CreditCard className="w-4 h-4" />
-                Update Payment
-              </button>
-            </div>
-            <div className="text-sm text-neutral-400">
-              Next deposit: {format(new Date(), 'MMMM d, yyyy')}
-            </div>
+        <div className="bg-neutral-900 rounded-lg p-4">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-neutral-400">Commission Rate</span>
+            <div className="text-[#F5A623]">{earnings.commission}%</div>
           </div>
+          <div className="text-sm text-neutral-500">
+            Platform service fee
+          </div>
+        </div>
+      </div>
+
+      <div className="bg-neutral-900 rounded-lg p-6">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-lg font-semibold">Payment Settings</h3>
+          <CreditCard className="w-5 h-5 text-[#F5A623]" />
+        </div>
+        
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between">
+          <div className="mb-4 sm:mb-0">
+            <p className="text-neutral-400">Current Payment Method</p>
+            <p className="text-sm text-neutral-500">Update your payment details and payout preferences</p>
+          </div>
+          
+          <button
+            onClick={onUpdatePayment}
+            className="px-4 py-2 bg-[#F5A623] text-white rounded-lg hover:bg-[#E09612] transition-colors"
+          >
+            Update Payment Info
+          </button>
         </div>
       </div>
     </div>

@@ -139,8 +139,13 @@ export default function DriverRegistration() {
       const driverRef = doc(db, 'drivers', user.uid);
       await setDoc(driverRef, driverData);
 
+      // Add a delay to ensure Firestore listener updates
+      await new Promise(resolve => setTimeout(resolve, 1500));
+
       // Refresh driver data in auth context
-      await refreshDriverData?.();
+      if (refreshDriverData) {
+        await refreshDriverData();
+      }
 
       // Send webhook (don't wait for response)
       fetch('https://hook.us1.make.com/jf2f7ipkfm91ap9np2ggvpp9iyxp1417', {
@@ -202,9 +207,7 @@ export default function DriverRegistration() {
               name="locationId"
               value={formData.locationId}
               onChange={handleChange}
-              className="w-full p-3 bg-white text-black rounded-lg"
-              required
-              disabled={isSubmitting}
+              className="w-full px-3 py-2 bg-neutral-800 border border-neutral-700 rounded-md focus:outline-none focus:ring-2 focus:ring-[#C69249]"
             >
               <option value="">Select a location</option>
               {locations.map(location => (
@@ -216,55 +219,51 @@ export default function DriverRegistration() {
           </div>
 
           <FormInput
+            label="Phone Number"
             type="tel"
             name="phone"
-            placeholder="PHONE NUMBER"
             value={formData.phone}
             onChange={handleChange}
-            required
-            className="bg-white text-black"
-            disabled={isSubmitting}
+            placeholder="+1 (555) 555-5555"
           />
 
-          <div className="bg-white p-4 rounded-lg">
-            <h3 className="font-semibold text-black mb-4">Vehicle Information</h3>
-            <div className="space-y-4">
+          <div className="space-y-4">
+            <h2 className="text-xl font-semibold text-[#C69249]">Vehicle Information</h2>
+
+            <div className="grid grid-cols-2 gap-4">
               <div>
-                <label htmlFor="vehicle.make" className="block text-sm font-medium text-gray-700 mb-2">
-                  Vehicle Make
+                <label htmlFor="vehicle.make" className="block text-sm font-medium mb-2">
+                  Make
                 </label>
                 <select
                   id="vehicle.make"
                   name="vehicle.make"
                   value={formData.vehicle.make}
                   onChange={handleChange}
-                  className="w-full p-3 bg-neutral-100 text-black rounded-lg"
-                  required
-                  disabled={isSubmitting}
+                  className="w-full px-3 py-2 bg-neutral-800 border border-neutral-700 rounded-md focus:outline-none focus:ring-2 focus:ring-[#C69249]"
                 >
-                  <option value="">Select a make</option>
+                  <option value="">Select make</option>
                   {vehicleMakes.map(make => (
-                    <option key={make.name} value={make.name}>
-                      {make.name}
+                    <option key={make} value={make}>
+                      {make}
                     </option>
                   ))}
                 </select>
               </div>
 
               <div>
-                <label htmlFor="vehicle.model" className="block text-sm font-medium text-gray-700 mb-2">
-                  Vehicle Model
+                <label htmlFor="vehicle.model" className="block text-sm font-medium mb-2">
+                  Model
                 </label>
                 <select
                   id="vehicle.model"
                   name="vehicle.model"
                   value={formData.vehicle.model}
                   onChange={handleChange}
-                  className="w-full p-3 bg-neutral-100 text-black rounded-lg"
-                  required
-                  disabled={isSubmitting || !formData.vehicle.make}
+                  disabled={!formData.vehicle.make}
+                  className="w-full px-3 py-2 bg-neutral-800 border border-neutral-700 rounded-md focus:outline-none focus:ring-2 focus:ring-[#C69249]"
                 >
-                  <option value="">Select a model</option>
+                  <option value="">Select model</option>
                   {availableModels.map(model => (
                     <option key={model} value={model}>
                       {model}
@@ -274,21 +273,19 @@ export default function DriverRegistration() {
               </div>
 
               <div>
-                <label htmlFor="vehicle.year" className="block text-sm font-medium text-gray-700 mb-2">
-                  Vehicle Year
+                <label htmlFor="vehicle.year" className="block text-sm font-medium mb-2">
+                  Year
                 </label>
                 <select
                   id="vehicle.year"
                   name="vehicle.year"
                   value={formData.vehicle.year}
                   onChange={handleChange}
-                  className="w-full p-3 bg-neutral-100 text-black rounded-lg"
-                  required
-                  disabled={isSubmitting}
+                  className="w-full px-3 py-2 bg-neutral-800 border border-neutral-700 rounded-md focus:outline-none focus:ring-2 focus:ring-[#C69249]"
                 >
-                  <option value="">Select a year</option>
+                  <option value="">Select year</option>
                   {yearOptions.map(year => (
-                    <option key={year} value={year.toString()}>
+                    <option key={year} value={year}>
                       {year}
                     </option>
                   ))}
@@ -296,46 +293,41 @@ export default function DriverRegistration() {
               </div>
 
               <div>
-                <label htmlFor="vehicle.color" className="block text-sm font-medium text-gray-700 mb-2">
-                  Vehicle Color
+                <label htmlFor="vehicle.color" className="block text-sm font-medium mb-2">
+                  Color
                 </label>
                 <select
                   id="vehicle.color"
                   name="vehicle.color"
                   value={formData.vehicle.color}
                   onChange={handleChange}
-                  className="w-full p-3 bg-neutral-100 text-black rounded-lg"
-                  required
-                  disabled={isSubmitting}
+                  className="w-full px-3 py-2 bg-neutral-800 border border-neutral-700 rounded-md focus:outline-none focus:ring-2 focus:ring-[#C69249]"
                 >
-                  <option value="">Select a color</option>
+                  <option value="">Select color</option>
                   {vehicleColors.map(color => (
-                    <option key={color.name} value={color.name}>
-                      {color.name}
+                    <option key={color} value={color}>
+                      {color}
                     </option>
                   ))}
                 </select>
               </div>
-
-              <FormInput
-                type="text"
-                name="vehicle.plate"
-                placeholder="LICENSE PLATE"
-                value={formData.vehicle.plate}
-                onChange={handleChange}
-                required
-                className="bg-neutral-100 text-black"
-                disabled={isSubmitting}
-              />
             </div>
+
+            <FormInput
+              label="License Plate"
+              name="vehicle.plate"
+              value={formData.vehicle.plate}
+              onChange={handleChange}
+              placeholder="Enter license plate number"
+            />
           </div>
 
           <button
             type="submit"
             disabled={isSubmitting}
-            className="w-full bg-[#C69249] text-white py-3 rounded-lg hover:bg-[#B68239] disabled:opacity-50"
+            className="w-full py-3 px-4 bg-[#C69249] text-white font-semibold rounded-md hover:bg-[#B58239] focus:outline-none focus:ring-2 focus:ring-[#C69249] focus:ring-offset-2 focus:ring-offset-black disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {isSubmitting ? 'Submitting...' : 'Complete Registration'}
+            {isSubmitting ? 'Completing Registration...' : 'Complete Registration'}
           </button>
         </form>
       </main>
