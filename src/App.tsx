@@ -35,7 +35,7 @@ const routes = [
   {
     path: "/find-drivers",
     element: (
-      <ProtectedRoute>
+      <ProtectedRoute requiresRider={true}>
         <FindDrivers />
       </ProtectedRoute>
     ),
@@ -63,7 +63,7 @@ const routes = [
   {
     path: "/driver/portal/*",
     element: (
-      <ProtectedRoute>
+      <ProtectedRoute requiresDriver={true}>
         <DriverPortal />
       </ProtectedRoute>
     ),
@@ -71,7 +71,7 @@ const routes = [
   {
     path: "/rider/portal/*",
     element: (
-      <ProtectedRoute>
+      <ProtectedRoute requiresRider={true}>
         <RiderPortal />
       </ProtectedRoute>
     ),
@@ -79,7 +79,7 @@ const routes = [
   {
     path: "/driver/tutorial",
     element: (
-      <ProtectedRoute>
+      <ProtectedRoute requiresDriver={true}>
         <DriverTutorialPage />
       </ProtectedRoute>
     ),
@@ -87,7 +87,7 @@ const routes = [
   {
     path: "/driver/onboarding",
     element: (
-      <ProtectedRoute>
+      <ProtectedRoute requiresDriver={true}>
         <OnboardingFlow />
       </ProtectedRoute>
     ),
@@ -95,7 +95,7 @@ const routes = [
   {
     path: "/driver/earnings",
     element: (
-      <ProtectedRoute>
+      <ProtectedRoute requiresDriver={true}>
         <EarningsDashboard />
       </ProtectedRoute>
     ),
@@ -103,7 +103,7 @@ const routes = [
   {
     path: "/driver/riders",
     element: (
-      <ProtectedRoute>
+      <ProtectedRoute requiresDriver={true}>
         <ManageRiders />
       </ProtectedRoute>
     ),
@@ -111,7 +111,7 @@ const routes = [
   {
     path: "/driver/messages",
     element: (
-      <ProtectedRoute>
+      <ProtectedRoute requiresDriver={true}>
         <Messages />
       </ProtectedRoute>
     ),

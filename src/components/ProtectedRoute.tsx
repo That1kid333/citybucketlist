@@ -4,10 +4,12 @@ import { useAuth } from '../providers/AuthProvider';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
+  requiresDriver?: boolean;
+  requiresRider?: boolean;
 }
 
-function ProtectedRoute({ children }: ProtectedRouteProps) {
-  const { user, driver, loading } = useAuth();
+function ProtectedRoute({ children, requiresDriver = false, requiresRider = false }: ProtectedRouteProps) {
+  const { user, driver, rider, loading } = useAuth();
   const location = useLocation();
 
   if (loading) {
@@ -19,12 +21,23 @@ function ProtectedRoute({ children }: ProtectedRouteProps) {
   }
 
   if (!user) {
-    return <Navigate to="/driver/login" replace />;
+    // Redirect to appropriate login page based on the route
+    const isDriverRoute = location.pathname.startsWith('/driver');
+    return <Navigate to={isDriverRoute ? '/driver/login' : '/rider/login'} state={{ from: location }} replace />;
   }
 
-  // If user is logged in but hasn't completed registration
-  if (!driver && location.pathname !== '/driver/register') {
-    return <Navigate to="/driver/register" replace />;
+  // Handle driver-specific routes
+  if (requiresDriver) {
+    if (!driver && location.pathname !== '/driver/register') {
+      return <Navigate to="/driver/register" state={{ from: location }} replace />;
+    }
+  }
+
+  // Handle rider-specific routes
+  if (requiresRider) {
+    if (!rider && location.pathname !== '/rider/register') {
+      return <Navigate to="/rider/register" state={{ from: location }} replace />;
+    }
   }
 
   return <>{children}</>;
