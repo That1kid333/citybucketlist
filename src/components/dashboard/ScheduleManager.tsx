@@ -71,7 +71,12 @@ export function ScheduleManager() {
         userId: user.uid
       };
 
-      await setDoc(timeSlotRef, newTimeSlot);
+      await setDoc(timeSlotRef, {
+        ...newSlot,
+        userId: user.uid,
+        createdAt: new Date().toISOString()
+      });
+      
       setAvailableSlots(prev => [...prev, newTimeSlot]);
       toast.success('Time slot added successfully');
       
@@ -83,18 +88,24 @@ export function ScheduleManager() {
       });
     } catch (error) {
       console.error('Error adding time slot:', error);
-      toast.error('Failed to add time slot');
+      toast.error('Failed to add time slot. Please try again.');
     }
   };
 
   const handleRemoveSlot = async (id: string) => {
+    if (!user?.uid) {
+      toast.error('Please sign in to manage your schedule');
+      return;
+    }
+
     try {
-      await deleteDoc(doc(db, 'timeSlots', id));
+      const timeSlotRef = doc(db, 'timeSlots', id);
+      await deleteDoc(timeSlotRef);
       setAvailableSlots(prev => prev.filter(slot => slot.id !== id));
       toast.success('Time slot removed successfully');
     } catch (error) {
       console.error('Error removing time slot:', error);
-      toast.error('Failed to remove time slot');
+      toast.error('Failed to remove time slot. Please try again.');
     }
   };
 
