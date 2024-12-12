@@ -36,6 +36,17 @@ service cloud.firestore {
       allow delete: if false; // Don't allow driver deletion
     }
 
+    // Riders collection rules
+    match /riders/{riderId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() && 
+        hasValidFields(['name', 'phone', 'driverId']);
+      allow update: if isAuthenticated() && 
+        (request.auth.uid == resource.data.driverId);
+      allow delete: if isAuthenticated() && 
+        (request.auth.uid == resource.data.driverId);
+    }
+
     // Rides collection rules
     match /rides/{rideId} {
       allow read: if true; // Allow public read for ride listings

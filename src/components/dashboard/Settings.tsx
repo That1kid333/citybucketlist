@@ -1,7 +1,5 @@
 import { AccountSettings } from './settings/AccountSettings';
 import { SecuritySettings } from './settings/SecuritySettings';
-import { NotificationSettings } from './settings/NotificationSettings';
-import { PaymentSettings } from './settings/PaymentSettings';
 import { Driver } from '../../types/driver';
 import { doc, updateDoc } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
@@ -38,8 +36,6 @@ export function Settings({ driver, onUpdate }: SettingsProps) {
     <div className="space-y-6">
       <AccountSettings driver={driver} onUpdate={handleDriverUpdate} />
       <SecuritySettings />
-      <NotificationSettings />
-      <PaymentSettings />
     </div>
   );
 }
