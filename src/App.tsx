@@ -1,5 +1,5 @@
 import React from 'react';
-import { createBrowserRouter, RouterProvider, Routes, Route } from 'react-router-dom';
+import { createBrowserRouter, RouterProvider, Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { AuthProvider } from './providers/AuthProvider';
 import BookingPage from './pages/BookingPage';
@@ -7,7 +7,7 @@ import DriversPage from './pages/DriversPage';
 import DriverPortal from './pages/DriverPortal';
 import RiderPortal from './pages/RiderPortal';
 import DriverLogin from './pages/DriverLogin';
-import DriverSignup from './pages/DriverSignup';
+import RiderLogin from './pages/RiderLogin';
 import DriverRegistration from './pages/DriverRegistration';
 import DriverTutorialPage from './pages/DriverTutorialPage';
 import FindDrivers from './pages/FindDrivers';
@@ -45,8 +45,12 @@ const routes = [
     element: <DriverLogin />,
   },
   {
+    path: "/rider/login",
+    element: <RiderLogin />,
+  },
+  {
     path: "/driver/signup",
-    element: <DriverSignup />,
+    element: <DriverRegistration />,
   },
   {
     path: "/driver/register",
@@ -116,18 +120,29 @@ const routes = [
     path: "/auth/google/callback",
     element: <GoogleAuthCallback />,
   },
+  {
+    path: "*",
+    element: <Navigate to="/" replace />,
+  },
 ];
 
+const router = {
+  future: {
+    v7_startTransition: true,
+    v7_relativeSplatPath: true,
+    v7_fetcherPersist: true,
+    v7_normalizeFormMethod: true,
+    v7_partialHydration: true,
+    v7_skipActionErrorRevalidation: true,
+  },
+};
+
 function App() {
-  const router = createBrowserRouter(routes, {
-    future: {
-      v7_startTransition: true,
-    }
-  });
+  const routerInstance = createBrowserRouter(routes, router);
 
   return (
     <AuthProvider>
-      <RouterProvider router={router} />
+      <RouterProvider router={routerInstance} />
       <Toaster 
         position="top-center"
         toastOptions={{
