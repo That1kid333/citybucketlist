@@ -1,22 +1,23 @@
 import React, { useRef } from 'react';
 import { User, Mail, Phone, MapPin, Camera } from 'lucide-react';
-import { Driver } from '../../../types/driver';
+import { Driver, Rider } from '../../../types';
 import { uploadToCloudinary } from '../../../lib/utils/cloudinaryUpload';
 import { toast } from 'react-hot-toast';
 
 interface AccountSettingsProps {
-  driver: Driver;
-  onUpdate: (updates: Partial<Driver>) => void;
+  user: Driver | Rider;
+  userType: 'driver' | 'rider';
+  onUpdate: (updates: Partial<Driver | Rider>) => void;
 }
 
-export function AccountSettings({ driver, onUpdate }: AccountSettingsProps) {
+export function AccountSettings({ user, userType, onUpdate }: AccountSettingsProps) {
   const [isEditing, setIsEditing] = React.useState(false);
   const [formData, setFormData] = React.useState({
-    name: driver.name,
-    email: driver.email,
-    phone: driver.phone,
-    locationId: driver.locationId || '',
-    photoURL: driver.photoURL
+    name: user.name,
+    email: user.email,
+    phone: user.phone || '',
+    locationId: user.locationId || '',
+    photoURL: user.photoURL || ''
   });
   const [isUploading, setIsUploading] = React.useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -50,7 +51,7 @@ export function AccountSettings({ driver, onUpdate }: AccountSettingsProps) {
     try {
       const photoURL = await uploadToCloudinary(file);
       
-      // Update the driver profile with new photo URL
+      // Update the user profile with new photo URL
       await onUpdate({ photoURL });
       
       toast.success('Profile photo updated successfully', { id: toastId });
@@ -83,11 +84,11 @@ export function AccountSettings({ driver, onUpdate }: AccountSettingsProps) {
             {formData.photoURL ? (
               <img
                 src={formData.photoURL}
-                alt={driver.name}
+                alt={user.name}
                 className="w-full h-full object-cover"
                 onError={(e) => {
                   const img = e.target as HTMLImageElement;
-                  img.src = 'https://via.placeholder.com/200?text=Driver';
+                  img.src = 'https://via.placeholder.com/200?text=User';
                 }}
               />
             ) : (
@@ -192,7 +193,7 @@ export function AccountSettings({ driver, onUpdate }: AccountSettingsProps) {
           <div className="flex items-center gap-3">
             <User className="w-5 h-5 text-neutral-500" />
             <div>
-              <div className="font-medium">{driver.name}</div>
+              <div className="font-medium">{user.name}</div>
               <div className="text-sm text-neutral-400">Full Name</div>
             </div>
           </div>
@@ -200,7 +201,7 @@ export function AccountSettings({ driver, onUpdate }: AccountSettingsProps) {
           <div className="flex items-center gap-3">
             <Mail className="w-5 h-5 text-neutral-500" />
             <div>
-              <div className="font-medium">{driver.email}</div>
+              <div className="font-medium">{user.email}</div>
               <div className="text-sm text-neutral-400">Email Address</div>
             </div>
           </div>
@@ -208,7 +209,7 @@ export function AccountSettings({ driver, onUpdate }: AccountSettingsProps) {
           <div className="flex items-center gap-3">
             <Phone className="w-5 h-5 text-neutral-500" />
             <div>
-              <div className="font-medium">{driver.phone}</div>
+              <div className="font-medium">{user.phone || 'Not specified'}</div>
               <div className="text-sm text-neutral-400">Phone Number</div>
             </div>
           </div>
@@ -216,7 +217,7 @@ export function AccountSettings({ driver, onUpdate }: AccountSettingsProps) {
           <div className="flex items-center gap-3">
             <MapPin className="w-5 h-5 text-neutral-500" />
             <div>
-              <div className="font-medium">{driver.locationId || 'Not specified'}</div>
+              <div className="font-medium">{user.locationId || 'Not specified'}</div>
               <div className="text-sm text-neutral-400">Location</div>
             </div>
           </div>

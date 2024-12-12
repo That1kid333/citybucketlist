@@ -172,7 +172,7 @@ function DriversPage() {
         <DriverDetailsModal
           driver={selectedDriver}
           onClose={() => setSelectedDriver(null)}
-          onSelect={handleSelectDriver}
+          onSelect={() => handleSelectDriver(selectedDriver)}
         />
       )}
 

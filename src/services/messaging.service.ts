@@ -9,6 +9,7 @@ import {
   doc,
   getDoc,
   getDocs,
+  limit,
   Timestamp,
   serverTimestamp,
 } from 'firebase/firestore';
@@ -101,12 +102,10 @@ export const messagingService = {
       riderId,
       driverName: driverData.name,
       riderName: riderData.name,
-      driverPhoto: driverData.photoURL,
-      riderPhoto: riderData.photoURL,
       lastMessage: '',
       lastMessageTime: new Date().toISOString(),
       unreadCount: 0,
-      messages: [],
+      messages: []
     };
 
     const chatDoc = await addDoc(chatsRef, chatData);

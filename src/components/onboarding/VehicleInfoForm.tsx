@@ -3,30 +3,55 @@ import { FormInput } from '../FormInput';
 import { Driver } from '../../types/driver';
 
 interface VehicleInfoFormProps {
-  driver: Driver;
-  onChange: (updates: Partial<Driver>) => void;
+  initialData?: {
+    make: string;
+    model: string;
+    year: string;
+    color: string;
+    plate: string;
+    insurance?: {
+      provider: string;
+      policyNumber: string;
+      expirationDate: string;
+      documentUrl: string;
+    };
+    registration?: {
+      expirationDate: string;
+      documentUrl: string;
+    };
+  };
+  onSubmit: (vehicleData: Driver['vehicle']) => Promise<void>;
 }
 
-export function VehicleInfoForm({ driver, onChange }: VehicleInfoFormProps) {
+export function VehicleInfoForm({ initialData = {}, onSubmit }: VehicleInfoFormProps) {
+  const [formData, setFormData] = React.useState(initialData);
+  const [isSubmitting, setIsSubmitting] = React.useState(false);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+    try {
+      await onSubmit(formData);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   const handleVehicleChange = (field: string, value: string) => {
-    onChange({
-      vehicle: {
-        ...driver.vehicle,
-        [field]: value
-      }
-    });
+    setFormData(prev => ({
+      ...prev,
+      [field]: value
+    }));
   };
 
   const handleInsuranceChange = (field: string, value: string) => {
-    onChange({
-      vehicle: {
-        ...driver.vehicle,
-        insurance: {
-          ...driver.vehicle.insurance,
-          [field]: value
-        }
+    setFormData(prev => ({
+      ...prev,
+      insurance: {
+        ...prev.insurance,
+        [field]: value
       }
-    });
+    }));
   };
 
   return (
@@ -37,7 +62,7 @@ export function VehicleInfoForm({ driver, onChange }: VehicleInfoFormProps) {
           <FormInput
             label="Make"
             type="text"
-            value={driver.vehicle.make}
+            value={formData.make}
             onChange={(e) => handleVehicleChange('make', e.target.value)}
             required
           />
@@ -45,7 +70,7 @@ export function VehicleInfoForm({ driver, onChange }: VehicleInfoFormProps) {
           <FormInput
             label="Model"
             type="text"
-            value={driver.vehicle.model}
+            value={formData.model}
             onChange={(e) => handleVehicleChange('model', e.target.value)}
             required
           />
@@ -54,7 +79,7 @@ export function VehicleInfoForm({ driver, onChange }: VehicleInfoFormProps) {
             label="Year"
             type="text"
             pattern="\d{4}"
-            value={driver.vehicle.year}
+            value={formData.year}
             onChange={(e) => handleVehicleChange('year', e.target.value)}
             required
           />
@@ -62,7 +87,7 @@ export function VehicleInfoForm({ driver, onChange }: VehicleInfoFormProps) {
           <FormInput
             label="Color"
             type="text"
-            value={driver.vehicle.color}
+            value={formData.color}
             onChange={(e) => handleVehicleChange('color', e.target.value)}
             required
           />
@@ -70,7 +95,7 @@ export function VehicleInfoForm({ driver, onChange }: VehicleInfoFormProps) {
           <FormInput
             label="License Plate"
             type="text"
-            value={driver.vehicle.plate}
+            value={formData.plate}
             onChange={(e) => handleVehicleChange('plate', e.target.value)}
             required
           />
@@ -83,7 +108,7 @@ export function VehicleInfoForm({ driver, onChange }: VehicleInfoFormProps) {
           <FormInput
             label="Insurance Provider"
             type="text"
-            value={driver.vehicle.insurance.provider}
+            value={formData.insurance?.provider}
             onChange={(e) => handleInsuranceChange('provider', e.target.value)}
             required
           />
@@ -91,7 +116,7 @@ export function VehicleInfoForm({ driver, onChange }: VehicleInfoFormProps) {
           <FormInput
             label="Policy Number"
             type="text"
-            value={driver.vehicle.insurance.policyNumber}
+            value={formData.insurance?.policyNumber}
             onChange={(e) => handleInsuranceChange('policyNumber', e.target.value)}
             required
           />
@@ -99,12 +124,20 @@ export function VehicleInfoForm({ driver, onChange }: VehicleInfoFormProps) {
           <FormInput
             label="Expiration Date"
             type="date"
-            value={driver.vehicle.insurance.expirationDate.split('T')[0]}
+            value={formData.insurance?.expirationDate?.split('T')[0]}
             onChange={(e) => handleInsuranceChange('expirationDate', new Date(e.target.value).toISOString())}
             required
           />
         </div>
       </div>
+
+      <button
+        type="submit"
+        disabled={isSubmitting}
+        onClick={handleSubmit}
+      >
+        Submit
+      </button>
     </div>
   );
 }

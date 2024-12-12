@@ -62,11 +62,10 @@ class AuthService {
         available: false,
         rating: 5.0,
         metrics: {
-          acceptanceRate: 100,
-          responseTime: 0,
-          hoursOnline: 0,
           totalRides: 0,
-          totalEarnings: 0
+          yearsActive: 0,
+          completionRate: 100,
+          averageResponseTime: 0
         },
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString()

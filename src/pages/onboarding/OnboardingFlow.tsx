@@ -165,12 +165,43 @@ export default function OnboardingFlow() {
     }
   };
 
+  const steps = [
+    {
+      id: 'profile',
+      title: 'Personal Information',
+      description: 'Basic details about you',
+      completed: currentStep > 0,
+      current: currentStep === 0
+    },
+    {
+      id: 'documents',
+      title: 'Documents',
+      description: 'License and background check',
+      completed: currentStep > 1,
+      current: currentStep === 1
+    },
+    {
+      id: 'vehicle',
+      title: 'Vehicle Information',
+      description: 'Your vehicle details',
+      completed: currentStep > 2,
+      current: currentStep === 2
+    },
+    {
+      id: 'subscription',
+      title: 'Subscription',
+      description: 'Choose your plan',
+      completed: currentStep > 3,
+      current: currentStep === 3
+    }
+  ];
+
   return (
     <div className="min-h-screen bg-black">
       <Header />
       <main className="container mx-auto px-4 py-8">
         <OnboardingProgress
-          steps={STEPS}
+          steps={steps}
           currentStep={currentStep}
         />
         <div className="mt-8">

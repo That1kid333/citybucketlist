@@ -42,9 +42,9 @@ export default function RiderPortal() {
       case 'schedule':
         return <RiderSchedule />;
       case 'messages':
-        return <Messages user={rider} userType="rider" />;
+        return rider ? <Messages user={rider as unknown as User} userType="rider" /> : null;
       case 'settings':
-        return <Settings user={rider} userType="rider" />;
+        return rider ? <Settings user={rider} userType="rider" /> : null;
       default:
         return <RiderOverview rider={rider} />;
     }

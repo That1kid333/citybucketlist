@@ -10,6 +10,6 @@ export async function uploadFile(
   return await getDownloadURL(storageRef);
 }
 
-export function getStoragePath(type: 'profile' | 'document', userId: string, fileName: string): string {
-  return `${type}s/${userId}/${fileName}`;
+export function getStoragePath(type: 'document' | 'profile' | 'licenses' | 'background-checks', userId: string, filename: string): string {
+  return `${type}/${userId}/${filename}`;
 }

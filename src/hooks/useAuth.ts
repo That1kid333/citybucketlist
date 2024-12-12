@@ -5,12 +5,16 @@ import { auth } from '../lib/firebase';
 interface AuthState {
   user: User | null;
   loading: boolean;
+  signOut: () => Promise<void>;
 }
 
 export function useAuth() {
   const [authState, setAuthState] = useState<AuthState>({
     user: null,
     loading: true,
+    signOut: async () => {
+      await auth.signOut();
+    }
   });
 
   useEffect(() => {
@@ -18,6 +22,7 @@ export function useAuth() {
       setAuthState({
         user,
         loading: false,
+        signOut: authState.signOut,
       });
     });
 
