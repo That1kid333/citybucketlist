@@ -16,15 +16,20 @@ export default defineConfig({
       output: {
         manualChunks: {
           vendor: ['react', 'react-dom', 'react-router-dom'],
-          antd: ['antd']
+          antd: ['antd'],
+          icons: ['react-icons', 'lucide-react']
         }
       }
     }
   },
   resolve: {
     alias: {
-      '@': '/src'
+      '@': '/src',
+      'react-icons': 'react-icons'
     }
+  },
+  optimizeDeps: {
+    include: ['react-icons']
   },
   server: {
     port: 3000
