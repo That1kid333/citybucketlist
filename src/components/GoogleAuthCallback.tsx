@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../providers/AuthProvider';
-import { checkRedirectResult } from '../lib/auth';
+import { handleRedirectResult } from '../services/auth';
 import { toast } from 'react-hot-toast';
 
 export function GoogleAuthCallback() {
@@ -11,15 +11,23 @@ export function GoogleAuthCallback() {
   useEffect(() => {
     const handleRedirect = async () => {
       try {
-        const result = await checkRedirectResult();
-        if (result) {
+        console.log('Handling Google Auth callback...');
+        const driver = await handleRedirectResult();
+        
+        if (driver) {
+          console.log('Driver data:', driver);
           toast.success('Successfully signed in!');
-          // Handle successful sign-in
-          if (result.additionalUserInfo?.isNewUser) {
+          
+          if (!driver.vehicle || !driver.phone) {
+            console.log('Driver needs to complete registration');
             navigate('/driver/registration');
           } else {
+            console.log('Driver fully registered, navigating to portal');
             navigate('/driver/portal');
           }
+        } else {
+          console.log('No redirect result found');
+          navigate('/driver/login');
         }
       } catch (error) {
         console.error('Error handling redirect:', error);

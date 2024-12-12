@@ -1,8 +1,8 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { User } from 'firebase/auth';
-import { doc, getDoc, onSnapshot } from 'firebase/firestore';
+import { doc, onSnapshot } from 'firebase/firestore';
 import { auth, db } from '../lib/firebase';
-import { signInWithGoogle, signOut } from '../lib/auth';
+import { signInWithGoogle, signOut } from '../services/auth';
 import { Driver } from '../types/driver';
 import { Rider } from '../types/rider';
 
@@ -44,8 +44,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const driverDoc = doc(db, 'drivers', user.uid);
         const driverUnsubscribe = onSnapshot(driverDoc, (doc) => {
           if (doc.exists()) {
-            console.log('Driver profile found:', doc.id);
-            setDriver({ id: doc.id, ...doc.data() } as Driver);
+            const data = doc.data();
+            console.log('Driver profile found:', doc.id, data);
+            setDriver({ 
+              id: doc.id, 
+              ...data,
+              email: user.email || data.email,
+              name: user.displayName || data.name,
+              photoURL: user.photoURL || data.photoURL,
+              createdAt: data.created_at || data.createdAt,
+              updatedAt: data.updated_at || data.updatedAt
+            } as Driver);
           } else {
             console.log('No driver profile found');
             setDriver(null);
@@ -99,10 +108,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setDriver(null);
       setRider(null);
       setProfilesChecked(false);
-    },
+    }
   };
 
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+  return (
+    <AuthContext.Provider value={value}>
+      {children}
+    </AuthContext.Provider>
+  );
 }
 
 export function useAuth() {
