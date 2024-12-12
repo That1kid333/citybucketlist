@@ -54,10 +54,18 @@ const routes = [
     element: <DriverSignup />,
   },
   {
-    path: "/driver/register",
+    path: "/driver/registration",
     element: (
       <ProtectedRoute>
         <DriverRegistration />
+      </ProtectedRoute>
+    ),
+  },
+  {
+    path: "/driver/portal",
+    element: (
+      <ProtectedRoute requiresDriver={true}>
+        <DriverPortal />
       </ProtectedRoute>
     ),
   },

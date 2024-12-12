@@ -12,6 +12,16 @@ function ProtectedRoute({ children, requiresDriver = false, requiresRider = fals
   const { user, driver, rider, loading } = useAuth();
   const location = useLocation();
 
+  console.log('ProtectedRoute:', {
+    pathname: location.pathname,
+    requiresDriver,
+    requiresRider,
+    hasUser: !!user,
+    hasDriver: !!driver,
+    hasRider: !!rider,
+    loading
+  });
+
   if (loading) {
     return (
       <div className="min-h-screen bg-black flex items-center justify-center">
@@ -21,6 +31,7 @@ function ProtectedRoute({ children, requiresDriver = false, requiresRider = fals
   }
 
   if (!user) {
+    console.log('No user, redirecting to login');
     // Redirect to appropriate login page based on the route
     const isDriverRoute = location.pathname.startsWith('/driver');
     return <Navigate to={isDriverRoute ? '/driver/login' : '/rider/login'} state={{ from: location }} replace />;
@@ -28,15 +39,17 @@ function ProtectedRoute({ children, requiresDriver = false, requiresRider = fals
 
   // Handle driver-specific routes
   if (requiresDriver) {
-    if (!driver && location.pathname !== '/driver/register') {
-      return <Navigate to="/driver/register" state={{ from: location }} replace />;
+    if (!driver && location.pathname !== '/driver/registration') {
+      console.log('Driver required but not found, redirecting to registration');
+      return <Navigate to="/driver/registration" state={{ from: location }} replace />;
     }
   }
 
   // Handle rider-specific routes
   if (requiresRider) {
-    if (!rider && location.pathname !== '/rider/register') {
-      return <Navigate to="/rider/register" state={{ from: location }} replace />;
+    if (!rider && location.pathname !== '/rider/registration') {
+      console.log('Rider required but not found, redirecting to registration');
+      return <Navigate to="/rider/registration" state={{ from: location }} replace />;
     }
   }
 
