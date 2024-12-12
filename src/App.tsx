@@ -5,6 +5,7 @@ import { AuthProvider } from './providers/AuthProvider';
 import BookingPage from './pages/BookingPage';
 import DriversPage from './pages/DriversPage';
 import DriverPortal from './pages/DriverPortal';
+import RiderPortal from './pages/RiderPortal';
 import DriverLogin from './pages/DriverLogin';
 import DriverSignup from './pages/DriverSignup';
 import DriverRegistration from './pages/DriverRegistration';
@@ -56,10 +57,18 @@ const routes = [
     ),
   },
   {
-    path: "/driver/portal",
+    path: "/driver/portal/*",
     element: (
       <ProtectedRoute>
         <DriverPortal />
+      </ProtectedRoute>
+    ),
+  },
+  {
+    path: "/rider/portal/*",
+    element: (
+      <ProtectedRoute>
+        <RiderPortal />
       </ProtectedRoute>
     ),
   },

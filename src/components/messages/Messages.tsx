@@ -1,126 +1,54 @@
-import React, { useEffect, useState, useRef } from 'react';
-import { useAuth } from '../../hooks/useAuth';
-import { messagingService } from '../../services/messaging.service';
-import { Chat, Message } from '../../types/message';
-import { format } from 'date-fns';
-import { Avatar, Button, Input, List, Typography, Divider } from 'antd';
-import { SendOutlined, SearchOutlined } from '@ant-design/icons';
+import React, { useState, useEffect } from 'react';
+import { List, Input, Button } from 'antd';
+import { SendOutlined } from '@ant-design/icons';
+import { useMessaging } from '../../hooks/useMessaging';
+import { Message } from '../../types/message';
 
-const { Text, Title } = Typography;
+interface MessagesProps {
+  user: any;
+  userType: 'rider' | 'driver';
+}
 
-export const Messages: React.FC = () => {
-  const { user } = useAuth();
-  const [chats, setChats] = useState<Chat[]>([]);
-  const [selectedChat, setSelectedChat] = useState<Chat | null>(null);
-  const [messages, setMessages] = useState<Message[]>([]);
-  const [newMessage, setNewMessage] = useState('');
-  const [searchQuery, setSearchQuery] = useState('');
-  const messagesEndRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (!user) return;
-
-    const unsubscribe = messagingService.subscribeToChats(
-      user.uid,
-      'driver',
-      (updatedChats) => {
-        setChats(updatedChats);
-      }
-    );
-
-    return () => unsubscribe();
-  }, [user]);
-
-  useEffect(() => {
-    if (!selectedChat) return;
-
-    const unsubscribe = messagingService.subscribeToMessages(
-      selectedChat.id,
-      (updatedMessages) => {
-        setMessages(updatedMessages);
-        scrollToBottom();
-      }
-    );
-
-    return () => unsubscribe();
-  }, [selectedChat]);
-
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  };
+export function Messages({ user, userType }: MessagesProps) {
+  const [selectedChat, setSelectedChat] = useState<string | null>(null);
+  const [messageText, setMessageText] = useState('');
+  const { chats, messages, sendMessage } = useMessaging(user?.id, userType);
 
   const handleSendMessage = async () => {
-    if (!user || !selectedChat || !newMessage.trim()) return;
-
-    await messagingService.sendMessage(selectedChat.id, {
-      content: newMessage.trim(),
-      senderId: user.uid,
-      senderName: user.displayName || 'Unknown Driver',
-      senderType: 'driver',
+    if (!messageText.trim() || !selectedChat) return;
+    
+    await sendMessage({
+      chatId: selectedChat,
+      content: messageText.trim(),
+      senderId: user.id,
+      senderType: userType,
       timestamp: new Date().toISOString(),
-      read: false,
     });
-
-    setNewMessage('');
-  };
-
-  const handleChatSelect = async (chat: Chat) => {
-    setSelectedChat(chat);
-    if (user) {
-      await messagingService.markChatAsRead(chat.id, user.uid);
-    }
-  };
-
-  const handleSearch = async () => {
-    if (!searchQuery.trim()) return;
-    // Implement driver search functionality
+    
+    setMessageText('');
   };
 
   return (
-    <div className="flex h-full">
+    <div className="flex h-[calc(100vh-theme(spacing.32))]">
       {/* Chat List */}
-      <div className="w-1/3 border-r border-gray-200 bg-white">
-        <div className="p-4">
-          <Title level={4}>Messages</Title>
-          <Input
-            placeholder="Search drivers..."
-            prefix={<SearchOutlined />}
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            onPressEnter={handleSearch}
-            className="mb-4"
-          />
-        </div>
+      <div className="w-1/4 border-r border-zinc-800 overflow-y-auto">
         <List
+          className="bg-zinc-900 rounded-lg"
           dataSource={chats}
           renderItem={(chat) => (
             <List.Item
-              onClick={() => handleChatSelect(chat)}
-              className={`cursor-pointer hover:bg-gray-50 ${
-                selectedChat?.id === chat.id ? 'bg-gray-100' : ''
+              onClick={() => setSelectedChat(chat.id)}
+              className={`cursor-pointer hover:bg-zinc-800 transition-colors ${
+                selectedChat === chat.id ? 'bg-zinc-800' : ''
               }`}
             >
-              <List.Item.Meta
-                avatar={
-                  <Avatar
-                    src={chat.riderPhoto}
-                    size="large"
-                  >
-                    {chat.riderName[0]}
-                  </Avatar>
-                }
-                title={chat.riderName}
-                description={chat.lastMessage}
-              />
-              <div className="text-right">
-                <Text type="secondary">
-                  {format(new Date(chat.lastMessageTime), 'HH:mm')}
-                </Text>
-                {chat.unreadCount > 0 && (
-                  <div className="bg-blue-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs">
-                    {chat.unreadCount}
-                  </div>
-                )}
+              <div className="p-4 text-white">
+                <div className="font-semibold">
+                  {userType === 'rider' ? chat.driverName : chat.riderName}
+                </div>
+                <div className="text-sm text-zinc-400">
+                  {chat.lastMessage || 'No messages yet'}
+                </div>
               </div>
             </List.Item>
           )}
@@ -128,80 +56,55 @@ export const Messages: React.FC = () => {
       </div>
 
       {/* Chat Messages */}
-      <div className="flex-1 flex flex-col bg-gray-50">
+      <div className="flex-1 flex flex-col">
         {selectedChat ? (
           <>
-            <div className="p-4 bg-white border-b border-gray-200">
-              <div className="flex items-center">
-                <Avatar
-                  src={selectedChat.riderPhoto}
-                  size="large"
-                >
-                  {selectedChat.riderName[0]}
-                </Avatar>
-                <div className="ml-3">
-                  <Title level={5} className="mb-0">
-                    {selectedChat.riderName}
-                  </Title>
-                </div>
-              </div>
-            </div>
-
-            <div className="flex-1 overflow-y-auto p-4">
-              {messages.map((message) => (
+            <div className="flex-1 overflow-y-auto p-4 space-y-4">
+              {messages.map((message: Message) => (
                 <div
                   key={message.id}
-                  className={`flex mb-4 ${
-                    message.senderId === user?.uid
-                      ? 'justify-end'
-                      : 'justify-start'
+                  className={`flex ${
+                    message.senderId === user.id ? 'justify-end' : 'justify-start'
                   }`}
                 >
                   <div
-                    className={`max-w-[70%] p-3 rounded-lg ${
-                      message.senderId === user?.uid
-                        ? 'bg-blue-500 text-white'
-                        : 'bg-white'
+                    className={`max-w-[70%] rounded-lg p-3 ${
+                      message.senderId === user.id
+                        ? 'bg-[#C69249] text-white'
+                        : 'bg-zinc-800 text-white'
                     }`}
                   >
-                    <Text className={message.senderId === user?.uid ? 'text-white' : ''}>
-                      {message.content}
-                    </Text>
-                    <div className="text-xs mt-1">
-                      <Text type="secondary" className={message.senderId === user?.uid ? 'text-gray-200' : ''}>
-                        {format(new Date(message.timestamp), 'HH:mm')}
-                      </Text>
+                    {message.content}
+                    <div className="text-xs mt-1 opacity-70">
+                      {new Date(message.timestamp).toLocaleTimeString()}
                     </div>
                   </div>
                 </div>
               ))}
-              <div ref={messagesEndRef} />
             </div>
-
-            <div className="p-4 bg-white border-t border-gray-200">
-              <div className="flex space-x-2">
+            <div className="p-4 border-t border-zinc-800">
+              <div className="flex gap-2">
                 <Input
+                  value={messageText}
+                  onChange={(e) => setMessageText(e.target.value)}
+                  onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
                   placeholder="Type a message..."
-                  value={newMessage}
-                  onChange={(e) => setNewMessage(e.target.value)}
-                  onPressEnter={handleSendMessage}
+                  className="bg-zinc-800 border-zinc-700 text-white"
                 />
                 <Button
-                  type="primary"
-                  icon={<SendOutlined />}
                   onClick={handleSendMessage}
-                >
-                  Send
-                </Button>
+                  icon={<SendOutlined />}
+                  className="bg-[#C69249] text-white border-none hover:bg-[#B58239]"
+                />
               </div>
             </div>
           </>
         ) : (
-          <div className="flex-1 flex items-center justify-center">
-            <Text type="secondary">Select a chat to start messaging</Text>
+          <div className="flex-1 flex items-center justify-center text-zinc-400">
+            Select a chat to start messaging
           </div>
         )}
       </div>
     </div>
   );
-};
+}

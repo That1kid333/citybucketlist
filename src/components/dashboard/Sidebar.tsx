@@ -1,67 +1,98 @@
 import React from 'react';
-import { 
-  LayoutDashboard, Car, Calendar, 
-  MessageCircle, Settings, Users 
+import {
+  HomeIcon,
+  CarIcon,
+  WalletIcon,
+  CalendarIcon,
+  MessageSquareIcon,
+  SettingsIcon,
+  LogOutIcon,
 } from 'lucide-react';
+import { useAuth } from '../../hooks/useAuth';
 import { NavLink } from 'react-router-dom';
 
 interface SidebarProps {
   currentView: string;
   onViewChange: (view: string) => void;
+  userType: 'rider' | 'driver';
 }
 
-export function Sidebar({ currentView, onViewChange }: SidebarProps) {
-  const menuItems = [
-    { id: 'overview', label: 'Overview', icon: LayoutDashboard },
-    { id: 'rides', label: 'Rides', icon: Car },
-    { id: 'schedule', label: 'Schedule', icon: Calendar },
-    { id: 'settings', label: 'Settings', icon: Settings }
+export function Sidebar({ currentView, onViewChange, userType }: SidebarProps) {
+  const { signOut } = useAuth();
+
+  const driverNavItems = [
+    { id: 'overview', label: 'Overview', icon: HomeIcon },
+    { id: 'rides', label: 'Rides', icon: CarIcon },
+    { id: 'earnings', label: 'Earnings', icon: WalletIcon },
+    { id: 'schedule', label: 'Schedule', icon: CalendarIcon },
+    { id: 'messages', label: 'Messages', icon: MessageSquareIcon },
+    { id: 'settings', label: 'Settings', icon: SettingsIcon },
   ];
 
+  const riderNavItems = [
+    { id: 'overview', label: 'Overview', icon: HomeIcon },
+    { id: 'rides', label: 'Rides', icon: CarIcon },
+    { id: 'messages', label: 'Messages', icon: MessageSquareIcon },
+    { id: 'settings', label: 'Settings', icon: SettingsIcon },
+  ];
+
+  const navItems = userType === 'driver' ? driverNavItems : riderNavItems;
+
   return (
-    <aside className="w-64 bg-neutral-900 min-h-screen p-4">
+    <div className="w-64 bg-zinc-900 min-h-screen p-4">
       <nav className="space-y-2">
-        {menuItems.map(({ id, label, icon: Icon }) => (
+        {navItems.map(({ id, label, icon: Icon }) => (
           <button
             key={id}
             onClick={() => onViewChange(id)}
-            className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
+            className={`w-full flex items-center space-x-3 px-4 py-2 rounded-lg transition-colors ${
               currentView === id
-                ? 'bg-[#F5A623] text-white'
-                : 'text-neutral-400 hover:bg-neutral-800 hover:text-white'
+                ? 'bg-[#C69249] text-white'
+                : 'text-zinc-400 hover:bg-zinc-800 hover:text-white'
             }`}
           >
             <Icon className="w-5 h-5" />
             <span>{label}</span>
           </button>
         ))}
-        <NavLink
-          to="/driver/riders"
-          className={({ isActive }) =>
-            `flex items-center space-x-2 p-2 rounded-lg transition-colors ${
-              isActive
-                ? 'bg-[#C69249] text-white'
-                : 'text-gray-400 hover:bg-neutral-800 hover:text-white'
-            }`
-          }
+        {userType === 'driver' && (
+          <NavLink
+            to="/driver/riders"
+            className={({ isActive }) =>
+              `flex items-center space-x-3 px-4 py-2 rounded-lg transition-colors ${
+                isActive
+                  ? 'bg-[#C69249] text-white'
+                  : 'text-zinc-400 hover:bg-zinc-800 hover:text-white'
+              }`
+            }
+          >
+            <Users className="w-5 h-5" />
+            <span>Manage Riders</span>
+          </NavLink>
+        )}
+        {userType === 'driver' && (
+          <NavLink
+            to="/driver/messages"
+            className={({ isActive }) =>
+              `flex items-center space-x-3 px-4 py-2 rounded-lg transition-colors ${
+                isActive
+                  ? 'bg-[#C69249] text-white'
+                  : 'text-zinc-400 hover:bg-zinc-800 hover:text-white'
+              }`
+            }
+          >
+            <MessageCircle className="w-5 h-5" />
+            <span>Messages</span>
+          </NavLink>
+        )}
+        <button
+          onClick={signOut}
+          className="w-full flex items-center space-x-3 px-4 py-2 rounded-lg text-zinc-400 hover:bg-zinc-800 hover:text-white transition-colors mt-8"
         >
-          <Users className="w-5 h-5" />
-          <span>Manage Riders</span>
-        </NavLink>
-        <NavLink
-          to="/driver/messages"
-          className={({ isActive }) =>
-            `flex items-center space-x-2 p-2 rounded-lg transition-colors ${
-              isActive
-                ? 'bg-[#C69249] text-white'
-                : 'text-gray-400 hover:bg-neutral-800 hover:text-white'
-            }`
-          }
-        >
-          <MessageCircle className="w-5 h-5" />
-          <span>Messages</span>
-        </NavLink>
+          <LogOutIcon className="w-5 h-5" />
+          <span>Sign Out</span>
+        </button>
       </nav>
-    </aside>
+    </div>
   );
 }
