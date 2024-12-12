@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { User, onAuthStateChanged } from 'firebase/auth';
 import { auth } from '../lib/firebase';
-import { doc, getDoc } from 'firebase/firestore';
+import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { Driver } from '../types/driver';
 
@@ -39,6 +39,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setIsCheckingDriver(true);
       console.log('Fetching driver data for:', uid);
       
+      // First check if the driver document exists
       const driverRef = doc(db, 'drivers', uid);
       const driverDoc = await getDoc(driverRef);
       
@@ -50,11 +51,33 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           id: uid // Ensure ID is set correctly
         });
       } else {
-        console.log('No driver data found');
-        setDriverData(null);
+        // If the driver document doesn't exist, create it with default values
+        console.log('Creating new driver document');
+        const newDriverData: Driver = {
+          id: uid,
+          name: user?.displayName || '',
+          email: user?.email || '',
+          photoURL: user?.photoURL || '',
+          rating: 5,
+          locationId: 'swfl',
+          vehicle: {
+            make: '',
+            model: '',
+            year: '',
+            color: '',
+            licensePlate: ''
+          },
+          available: true,
+          createdAt: new Date().toISOString(),
+          lastActive: new Date().toISOString()
+        };
+        
+        await setDoc(driverRef, newDriverData);
+        setDriverData(newDriverData);
+        console.log('Created new driver document:', newDriverData);
       }
     } catch (err) {
-      console.error('Error fetching driver data:', err);
+      console.error('Error fetching/creating driver data:', err);
       setError(err instanceof Error ? err.message : 'An error occurred');
       setDriverData(null);
     } finally {

@@ -33,12 +33,7 @@ service cloud.firestore {
 
     // Drivers collection rules
     match /drivers/{driverId} {
-      allow read: if true;
-      allow create: if isAuthenticated();
-      allow update: if isDriver(driverId) || 
-                     (isAuthenticated() && request.resource.data.diff(resource.data).affectedKeys()
-                       .hasOnly(['available', 'lastActive', 'location', 'photoURL']));
-      allow delete: if false;
+      allow read, write: if true;
     }
 
     // Messages collection rules
