@@ -112,5 +112,43 @@ service cloud.firestore {
       allow read: if true; // Allow public read for locations
       allow write: if false; // Only admins can modify locations (via Admin SDK)
     }
+
+    // Chats collection rules
+    match /chats/{chatId} {
+      allow read: if isAuthenticated() && (
+        resource.data.driverId == request.auth.uid ||
+        resource.data.riderId == request.auth.uid
+      );
+      allow create: if isAuthenticated() && 
+        hasValidFields(['driverId', 'riderId', 'driverName', 'riderName']) &&
+        (request.resource.data.driverId == request.auth.uid ||
+         request.resource.data.riderId == request.auth.uid);
+      allow update: if isAuthenticated() && 
+        (resource.data.driverId == request.auth.uid ||
+         resource.data.riderId == request.auth.uid) &&
+        request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(['lastMessage', 'lastMessageTime', 'unreadCount']);
+
+      // Messages subcollection rules
+      match /messages/{messageId} {
+        allow read: if isAuthenticated() && (
+          get(/databases/$(database)/documents/chats/$(chatId)).data.driverId == request.auth.uid ||
+          get(/databases/$(database)/documents/chats/$(chatId)).data.riderId == request.auth.uid
+        );
+        allow create: if isAuthenticated() && 
+          hasValidFields(['content', 'senderId', 'senderName', 'senderType', 'timestamp', 'read']) &&
+          request.resource.data.senderId == request.auth.uid &&
+          (
+            get(/databases/$(database)/documents/chats/$(chatId)).data.driverId == request.auth.uid ||
+            get(/databases/$(database)/documents/chats/$(chatId)).data.riderId == request.auth.uid
+          );
+        allow update: if isAuthenticated() &&
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['read']) &&
+          (
+            get(/databases/$(database)/documents/chats/$(chatId)).data.driverId == request.auth.uid ||
+            get(/databases/$(database)/documents/chats/$(chatId)).data.riderId == request.auth.uid
+          );
+      }
+    }
   }
 }

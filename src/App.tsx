@@ -16,6 +16,7 @@ import { ThankYouPage } from './pages/ThankYouPage';
 import ProtectedRoute from './components/ProtectedRoute';
 import { ManageRiders } from './pages/ManageRiders';
 import { GoogleAuthCallback } from './components/GoogleAuthCallback';
+import { Messages } from './components/messages/Messages';
 
 const routes = [
   {
@@ -91,6 +92,14 @@ const routes = [
     element: (
       <ProtectedRoute>
         <ManageRiders />
+      </ProtectedRoute>
+    ),
+  },
+  {
+    path: "/driver/messages",
+    element: (
+      <ProtectedRoute>
+        <Messages />
       </ProtectedRoute>
     ),
   },

@@ -1,6 +1,6 @@
 import React from 'react';
 import { 
-  LayoutDashboard, Car, DollarSign, Calendar, 
+  LayoutDashboard, Car, Calendar, 
   MessageCircle, Settings, Users 
 } from 'lucide-react';
 import { NavLink } from 'react-router-dom';
@@ -15,8 +15,6 @@ export function Sidebar({ currentView, onViewChange }: SidebarProps) {
     { id: 'overview', label: 'Overview', icon: LayoutDashboard },
     { id: 'rides', label: 'Rides', icon: Car },
     { id: 'schedule', label: 'Schedule', icon: Calendar },
-    { id: 'earnings', label: 'Earnings', icon: DollarSign },
-    { id: 'messages', label: 'Messages', icon: MessageCircle },
     { id: 'settings', label: 'Settings', icon: Settings }
   ];
 
@@ -49,6 +47,19 @@ export function Sidebar({ currentView, onViewChange }: SidebarProps) {
         >
           <Users className="w-5 h-5" />
           <span>Manage Riders</span>
+        </NavLink>
+        <NavLink
+          to="/driver/messages"
+          className={({ isActive }) =>
+            `flex items-center space-x-2 p-2 rounded-lg transition-colors ${
+              isActive
+                ? 'bg-[#C69249] text-white'
+                : 'text-gray-400 hover:bg-neutral-800 hover:text-white'
+            }`
+          }
+        >
+          <MessageCircle className="w-5 h-5" />
+          <span>Messages</span>
         </NavLink>
       </nav>
     </aside>
