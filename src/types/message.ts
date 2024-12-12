@@ -1,47 +1,24 @@
 import { z } from 'zod';
 
-export interface Message {
-  id: string;
-  content: string;
-  senderId: string;
-  senderName: string;
-  senderType: 'driver' | 'rider';
-  timestamp: string;
-  read: boolean;
-}
-
-export interface Chat {
-  id: string;
-  driverId: string;
-  riderId: string;
-  driverName: string;
-  riderName: string;
-  driverPhoto?: string;
-  riderPhoto?: string;
-  lastMessage: string;
-  lastMessageTime: string;
-  unreadCount: number;
-  messages: Message[];
-}
-
 export const messageSchema = z.object({
-  content: z.string().min(1, 'Message cannot be empty'),
+  id: z.string(),
+  chatId: z.string(),
+  content: z.string(),
   senderId: z.string(),
-  senderName: z.string(),
-  senderType: z.enum(['driver', 'rider']),
+  senderType: z.enum(['rider', 'driver']),
   timestamp: z.string(),
-  read: z.boolean(),
 });
 
 export const chatSchema = z.object({
-  driverId: z.string(),
+  id: z.string(),
   riderId: z.string(),
-  driverName: z.string(),
   riderName: z.string(),
-  driverPhoto: z.string().optional(),
-  riderPhoto: z.string().optional(),
-  lastMessage: z.string(),
-  lastMessageTime: z.string(),
-  unreadCount: z.number(),
-  messages: z.array(messageSchema),
+  driverId: z.string(),
+  driverName: z.string(),
+  lastMessage: z.string().optional(),
+  lastMessageTime: z.string().optional(),
+  unreadCount: z.number().default(0),
 });
+
+export type Message = z.infer<typeof messageSchema>;
+export type Chat = z.infer<typeof chatSchema>;

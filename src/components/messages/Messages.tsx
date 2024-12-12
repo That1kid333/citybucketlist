@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { List, Input, Button } from 'antd';
 import { SendOutlined } from '@ant-design/icons';
 import { useMessaging } from '../../hooks/useMessaging';
@@ -10,15 +10,14 @@ interface MessagesProps {
 }
 
 export function Messages({ user, userType }: MessagesProps) {
-  const [selectedChat, setSelectedChat] = useState<string | null>(null);
   const [messageText, setMessageText] = useState('');
-  const { chats, messages, sendMessage } = useMessaging(user?.id, userType);
+  const { chats, messages, sendMessage, selectedChatId, setSelectedChatId } = useMessaging(user?.id, userType);
 
   const handleSendMessage = async () => {
-    if (!messageText.trim() || !selectedChat) return;
+    if (!messageText.trim() || !selectedChatId) return;
     
     await sendMessage({
-      chatId: selectedChat,
+      chatId: selectedChatId,
       content: messageText.trim(),
       senderId: user.id,
       senderType: userType,
@@ -37,9 +36,9 @@ export function Messages({ user, userType }: MessagesProps) {
           dataSource={chats}
           renderItem={(chat) => (
             <List.Item
-              onClick={() => setSelectedChat(chat.id)}
+              onClick={() => setSelectedChatId(chat.id)}
               className={`cursor-pointer hover:bg-zinc-800 transition-colors ${
-                selectedChat === chat.id ? 'bg-zinc-800' : ''
+                selectedChatId === chat.id ? 'bg-zinc-800' : ''
               }`}
             >
               <div className="p-4 text-white">
@@ -57,7 +56,7 @@ export function Messages({ user, userType }: MessagesProps) {
 
       {/* Chat Messages */}
       <div className="flex-1 flex flex-col">
-        {selectedChat ? (
+        {selectedChatId ? (
           <>
             <div className="flex-1 overflow-y-auto p-4 space-y-4">
               {messages.map((message: Message) => (
