@@ -58,13 +58,13 @@ export function RiderList({ riders, onEdit, onDelete }: RiderListProps) {
           {(rider.pickupAddress || rider.dropoffAddress) && (
             <div className="mt-4 space-y-2">
               {rider.pickupAddress && (
-                <p className="text-sm">
+                <p className="text-sm text-white">
                   <span className="text-gray-400">Pickup:</span>{' '}
                   {rider.pickupAddress}
                 </p>
               )}
               {rider.dropoffAddress && (
-                <p className="text-sm">
+                <p className="text-sm text-white">
                   <span className="text-gray-400">Dropoff:</span>{' '}
                   {rider.dropoffAddress}
                 </p>
