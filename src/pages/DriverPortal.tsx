@@ -92,17 +92,22 @@ export default function DriverPortal() {
   if (loading) {
     return (
       <div className="min-h-screen bg-black flex items-center justify-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-[#C69249]" />
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-[#C69249] mx-auto mb-4" />
+          <p className="text-[#C69249]">Loading driver portal...</p>
+        </div>
       </div>
     );
   }
 
-  if (!user || !driver) {
-    return (
-      <div className="min-h-screen bg-black flex items-center justify-center">
-        <div className="text-[#C69249] text-xl">Please log in to access the driver portal</div>
-      </div>
-    );
+  if (!user) {
+    window.location.href = '/driver/login';
+    return null;
+  }
+
+  if (!driver) {
+    window.location.href = '/driver/registration';
+    return null;
   }
 
   return (

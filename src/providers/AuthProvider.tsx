@@ -22,6 +22,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [driver, setDriver] = useState<Driver | null>(null);
   const [rider, setRider] = useState<Rider | null>(null);
   const [loading, setLoading] = useState(true);
+  const [profilesChecked, setProfilesChecked] = useState(false);
 
   useEffect(() => {
     console.log('Setting up auth state listener');
@@ -34,6 +35,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setDriver(null);
         setRider(null);
         setLoading(false);
+        setProfilesChecked(false);
         return;
       }
 
@@ -42,20 +44,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const driverDoc = doc(db, 'drivers', user.uid);
         const driverUnsubscribe = onSnapshot(driverDoc, (doc) => {
           if (doc.exists()) {
+            console.log('Driver profile found:', doc.id);
             setDriver({ id: doc.id, ...doc.data() } as Driver);
           } else {
+            console.log('No driver profile found');
             setDriver(null);
           }
+          setProfilesChecked(true);
         });
 
         // Check for rider profile
         const riderDoc = doc(db, 'riders', user.uid);
         const riderUnsubscribe = onSnapshot(riderDoc, (doc) => {
           if (doc.exists()) {
+            console.log('Rider profile found:', doc.id);
             setRider({ id: doc.id, ...doc.data() } as Rider);
           } else {
+            console.log('No rider profile found');
             setRider(null);
           }
+          setProfilesChecked(true);
         });
 
         return () => {
@@ -65,11 +73,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       } catch (error) {
         console.error('Error fetching user data:', error);
         setLoading(false);
+        setProfilesChecked(true);
       }
     });
 
     return () => unsubscribe();
   }, []);
+
+  // Update loading state when profiles are checked
+  useEffect(() => {
+    if (profilesChecked) {
+      console.log('Profiles checked, setting loading to false');
+      setLoading(false);
+    }
+  }, [profilesChecked]);
 
   const value = {
     user,
@@ -81,6 +98,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       await signOut();
       setDriver(null);
       setRider(null);
+      setProfilesChecked(false);
     },
   };
 
