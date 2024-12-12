@@ -1,6 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Calendar, Clock, Plus, X } from 'lucide-react';
-import { format, startOfWeek, addDays } from 'date-fns';
+import { format, startOfWeek, addDays, parseISO } from 'date-fns';
+import { getAuthUrl, addEventToCalendar, listEvents } from '../../services/googleCalendar';
+import toast from 'react-hot-toast';
 
 interface TimeSlot {
   id: string;
@@ -10,36 +12,62 @@ interface TimeSlot {
 }
 
 export function ScheduleManager() {
-  const [availableSlots, setAvailableSlots] = useState<TimeSlot[]>([
-    {
-      id: '1',
-      day: 'Monday',
-      startTime: '09:00',
-      endTime: '17:00'
-    },
-    {
-      id: '2',
-      day: 'Wednesday',
-      startTime: '10:00',
-      endTime: '18:00'
-    }
-  ]);
-
+  const [availableSlots, setAvailableSlots] = useState<TimeSlot[]>([]);
   const [showAddSlot, setShowAddSlot] = useState(false);
   const [newSlot, setNewSlot] = useState<Omit<TimeSlot, 'id'>>({
     day: 'Monday',
     startTime: '09:00',
     endTime: '17:00'
   });
+  const [isGoogleCalendarLinked, setIsGoogleCalendarLinked] = useState(false);
+
+  useEffect(() => {
+    const tokens = localStorage.getItem('googleCalendarTokens');
+    setIsGoogleCalendarLinked(!!tokens);
+    if (tokens) {
+      syncWithGoogleCalendar();
+    }
+  }, []);
 
   const weekDays = Array.from({ length: 7 }, (_, i) => {
     const date = addDays(startOfWeek(new Date()), i);
     return format(date, 'EEEE');
   });
 
-  const handleAddSlot = () => {
+  const handleAddSlot = async () => {
     const id = Date.now().toString();
-    setAvailableSlots(prev => [...prev, { ...newSlot, id }]);
+    const newTimeSlot = { ...newSlot, id };
+    setAvailableSlots(prev => [...prev, newTimeSlot]);
+    
+    if (isGoogleCalendarLinked) {
+      try {
+        const today = new Date();
+        const dayIndex = weekDays.indexOf(newSlot.day);
+        const slotDate = addDays(startOfWeek(today), dayIndex);
+        
+        const [startHour, startMinute] = newSlot.startTime.split(':');
+        const [endHour, endMinute] = newSlot.endTime.split(':');
+        
+        const startDateTime = new Date(slotDate);
+        startDateTime.setHours(parseInt(startHour), parseInt(startMinute));
+        
+        const endDateTime = new Date(slotDate);
+        endDateTime.setHours(parseInt(endHour), parseInt(endMinute));
+
+        await addEventToCalendar({
+          summary: 'Available for Rides',
+          description: 'Time slot for ride availability',
+          start: { dateTime: startDateTime.toISOString() },
+          end: { dateTime: endDateTime.toISOString() }
+        });
+        
+        toast.success('Time slot added to Google Calendar');
+      } catch (error) {
+        console.error('Error adding event to Google Calendar:', error);
+        toast.error('Failed to add time slot to Google Calendar');
+      }
+    }
+
     setShowAddSlot(false);
     setNewSlot({
       day: 'Monday',
@@ -52,139 +80,147 @@ export function ScheduleManager() {
     setAvailableSlots(prev => prev.filter(slot => slot.id !== id));
   };
 
+  const handleLinkGoogleCalendar = () => {
+    const authUrl = getAuthUrl();
+    const width = 600;
+    const height = 600;
+    const left = window.screenX + (window.outerWidth - width) / 2;
+    const top = window.screenY + (window.outerHeight - height) / 2;
+    
+    const authWindow = window.open(
+      authUrl,
+      'Google Calendar Auth',
+      `width=${width},height=${height},left=${left},top=${top}`
+    );
+
+    const handleMessage = (event: MessageEvent) => {
+      if (event.origin !== window.location.origin) return;
+
+      if (event.data === 'google-calendar-success') {
+        setIsGoogleCalendarLinked(true);
+        syncWithGoogleCalendar();
+        toast.success('Successfully linked Google Calendar!');
+      } else if (event.data === 'google-calendar-error') {
+        toast.error('Failed to link Google Calendar');
+      }
+
+      window.removeEventListener('message', handleMessage);
+    };
+
+    window.addEventListener('message', handleMessage);
+  };
+
+  const syncWithGoogleCalendar = async () => {
+    try {
+      const events = await listEvents();
+      if (events) {
+        const timeSlots = events.map(event => ({
+          id: event.id || Date.now().toString(),
+          day: format(parseISO(event.start.dateTime), 'EEEE'),
+          startTime: format(parseISO(event.start.dateTime), 'HH:mm'),
+          endTime: format(parseISO(event.end.dateTime), 'HH:mm')
+        }));
+        setAvailableSlots(timeSlots);
+      }
+    } catch (error) {
+      console.error('Error syncing with Google Calendar:', error);
+      toast.error('Failed to sync with Google Calendar');
+    }
+  };
+
   return (
-    <div className="space-y-6">
-      {/* Weekly Calendar View */}
-      <div className="bg-neutral-900 rounded-lg p-6">
-        <div className="flex items-center justify-between mb-6">
-          <h2 className="text-xl font-semibold">Weekly Schedule</h2>
+    <div className="p-4 bg-white rounded-lg shadow">
+      <div className="flex justify-between items-center mb-4">
+        <h2 className="text-xl font-semibold">Schedule Manager</h2>
+        <div className="space-x-2">
+          {!isGoogleCalendarLinked ? (
+            <button
+              onClick={handleLinkGoogleCalendar}
+              className="flex items-center px-3 py-2 text-sm bg-blue-600 text-white rounded hover:bg-blue-700"
+            >
+              <Calendar className="w-4 h-4 mr-2" />
+              Link Google Calendar
+            </button>
+          ) : (
+            <button
+              onClick={syncWithGoogleCalendar}
+              className="flex items-center px-3 py-2 text-sm bg-green-600 text-white rounded hover:bg-green-700"
+            >
+              <Calendar className="w-4 h-4 mr-2" />
+              Sync Calendar
+            </button>
+          )}
           <button
             onClick={() => setShowAddSlot(true)}
-            className="flex items-center gap-2 px-4 py-2 bg-[#F5A623] text-white rounded-lg hover:bg-[#E09612] transition-colors"
+            className="flex items-center px-3 py-2 text-sm bg-primary text-white rounded hover:bg-primary/90"
           >
-            <Plus className="w-4 h-4" />
+            <Plus className="w-4 h-4 mr-2" />
             Add Time Slot
           </button>
         </div>
-
-        <div className="grid grid-cols-7 gap-4">
-          {weekDays.map((day) => (
-            <div key={day} className="text-center">
-              <div className="font-medium mb-2">{day}</div>
-              <div className="bg-neutral-800 rounded-lg p-3 min-h-[100px]">
-                {availableSlots
-                  .filter(slot => slot.day === day)
-                  .map(slot => (
-                    <div
-                      key={slot.id}
-                      className="bg-[#F5A623]/10 text-[#F5A623] rounded p-2 mb-2 text-sm"
-                    >
-                      <div className="flex items-center justify-between">
-                        <span>{slot.startTime}</span>
-                        <button
-                          onClick={() => handleRemoveSlot(slot.id)}
-                          className="text-neutral-400 hover:text-white"
-                        >
-                          <X className="w-4 h-4" />
-                        </button>
-                      </div>
-                      <div>{slot.endTime}</div>
-                    </div>
-                  ))}
-              </div>
-            </div>
-          ))}
-        </div>
       </div>
 
-      {/* Break Time Settings */}
-      <div className="bg-neutral-900 rounded-lg p-6">
-        <h2 className="text-xl font-semibold mb-4">Break Time Settings</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="bg-neutral-800 p-4 rounded-lg">
-            <h3 className="font-medium text-[#F5A623] mb-2">Lunch Break</h3>
-            <div className="flex items-center gap-2">
-              <Clock className="w-4 h-4 text-neutral-400" />
-              <span>12:00 PM - 1:00 PM</span>
-            </div>
-          </div>
-
-          <div className="bg-neutral-800 p-4 rounded-lg">
-            <h3 className="font-medium text-[#F5A623] mb-2">Rest Periods</h3>
-            <div className="flex items-center gap-2">
-              <Clock className="w-4 h-4 text-neutral-400" />
-              <span>15 minutes every 4 hours</span>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Add Time Slot Modal */}
       {showAddSlot && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4">
-          <div className="bg-neutral-900 rounded-lg p-6 w-full max-w-md">
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-semibold">Add Time Slot</h3>
-              <button
-                onClick={() => setShowAddSlot(false)}
-                className="text-neutral-400 hover:text-white"
-              >
-                <X className="w-6 h-6" />
-              </button>
-            </div>
-
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-neutral-400 mb-1">
-                  Day
-                </label>
-                <select
-                  value={newSlot.day}
-                  onChange={(e) => setNewSlot(prev => ({ ...prev, day: e.target.value }))}
-                  className="w-full bg-neutral-800 border border-neutral-700 rounded-lg px-4 py-2"
-                >
-                  {weekDays.map(day => (
-                    <option key={day} value={day}>{day}</option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-neutral-400 mb-1">
-                    Start Time
-                  </label>
-                  <input
-                    type="time"
-                    value={newSlot.startTime}
-                    onChange={(e) => setNewSlot(prev => ({ ...prev, startTime: e.target.value }))}
-                    className="w-full bg-neutral-800 border border-neutral-700 rounded-lg px-4 py-2"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-neutral-400 mb-1">
-                    End Time
-                  </label>
-                  <input
-                    type="time"
-                    value={newSlot.endTime}
-                    onChange={(e) => setNewSlot(prev => ({ ...prev, endTime: e.target.value }))}
-                    className="w-full bg-neutral-800 border border-neutral-700 rounded-lg px-4 py-2"
-                  />
-                </div>
-              </div>
-
-              <button
-                onClick={handleAddSlot}
-                className="w-full py-2 bg-[#F5A623] text-white rounded-lg hover:bg-[#E09612] transition-colors"
-              >
-                Add Time Slot
-              </button>
-            </div>
+        <div className="mb-4 p-4 border rounded">
+          <div className="grid grid-cols-3 gap-4">
+            <select
+              value={newSlot.day}
+              onChange={(e) => setNewSlot(prev => ({ ...prev, day: e.target.value }))}
+              className="border rounded p-2"
+            >
+              {weekDays.map(day => (
+                <option key={day} value={day}>{day}</option>
+              ))}
+            </select>
+            <input
+              type="time"
+              value={newSlot.startTime}
+              onChange={(e) => setNewSlot(prev => ({ ...prev, startTime: e.target.value }))}
+              className="border rounded p-2"
+            />
+            <input
+              type="time"
+              value={newSlot.endTime}
+              onChange={(e) => setNewSlot(prev => ({ ...prev, endTime: e.target.value }))}
+              className="border rounded p-2"
+            />
+          </div>
+          <div className="mt-4 flex justify-end space-x-2">
+            <button
+              onClick={() => setShowAddSlot(false)}
+              className="px-3 py-2 text-sm border rounded hover:bg-gray-50"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleAddSlot}
+              className="px-3 py-2 text-sm bg-primary text-white rounded hover:bg-primary/90"
+            >
+              Add Slot
+            </button>
           </div>
         </div>
       )}
+
+      <div className="space-y-2">
+        {availableSlots.map(slot => (
+          <div key={slot.id} className="flex items-center justify-between p-3 border rounded">
+            <div className="flex items-center space-x-4">
+              <span className="font-medium">{slot.day}</span>
+              <div className="flex items-center text-gray-600">
+                <Clock className="w-4 h-4 mr-1" />
+                {slot.startTime} - {slot.endTime}
+              </div>
+            </div>
+            <button
+              onClick={() => handleRemoveSlot(slot.id)}
+              className="text-red-600 hover:text-red-700"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }

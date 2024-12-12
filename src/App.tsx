@@ -15,6 +15,7 @@ import { EarningsDashboard } from './pages/dashboard/EarningsDashboard';
 import { ThankYouPage } from './pages/ThankYouPage';
 import ProtectedRoute from './components/ProtectedRoute';
 import { ManageRiders } from './pages/ManageRiders';
+import { GoogleAuthCallback } from './components/GoogleAuthCallback';
 
 const routes = [
   {
@@ -92,6 +93,10 @@ const routes = [
         <ManageRiders />
       </ProtectedRoute>
     ),
+  },
+  {
+    path: "/auth/google/callback",
+    element: <GoogleAuthCallback />,
   },
 ];
 
