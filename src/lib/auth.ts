@@ -4,6 +4,14 @@ import { auth } from './firebase';
 export async function signInWithGoogle() {
   try {
     const provider = new GoogleAuthProvider();
+    
+    // Configure custom parameters for the Google sign-in popup
+    provider.setCustomParameters({
+      prompt: 'select_account',
+      // Handle COOP policy by specifying window features
+      display: 'popup'
+    });
+
     const result = await signInWithPopup(auth, provider);
     return result.user;
   } catch (error) {

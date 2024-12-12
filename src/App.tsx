@@ -127,23 +127,18 @@ const routes = [
   },
 ];
 
-const router = {
+const router = createBrowserRouter(routes, {
   future: {
     v7_startTransition: true,
-    v7_relativeSplatPath: true,
-    v7_fetcherPersist: true,
-    v7_normalizeFormMethod: true,
-    v7_prependBasename: true
-  },
-  basename: '/'
-};
+    v7_partialHydration: true,
+    v7_skipActionErrorRevalidation: true
+  }
+});
 
-function App() {
-  const routerInstance = createBrowserRouter(routes, router);
-
+export function App() {
   return (
     <AuthProvider>
-      <RouterProvider router={routerInstance} />
+      <RouterProvider router={router} />
       <Toaster 
         position="top-center"
         toastOptions={{
@@ -169,5 +164,3 @@ function App() {
     </AuthProvider>
   );
 }
-
-export default App;
