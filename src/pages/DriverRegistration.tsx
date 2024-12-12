@@ -60,15 +60,29 @@ export default function DriverRegistration() {
   useEffect(() => {
     if (!loading) {
       if (!user) {
-        navigate('/driver/signup');
+        navigate('/driver/login');
       } else if (driver) {
         navigate('/driver/portal');
       }
     }
   }, [user, driver, loading, navigate]);
 
-  // Return null if loading, no user, or driver already exists
-  if (loading || !user || driver) {
+  // Return loading state instead of null
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-black flex items-center justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-[#C69249]" />
+      </div>
+    );
+  }
+
+  // Return to login if no user
+  if (!user) {
+    return null;
+  }
+
+  // Redirect if driver already exists
+  if (driver) {
     return null;
   }
 

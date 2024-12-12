@@ -1,5 +1,5 @@
 import React from 'react';
-import { createBrowserRouter, RouterProvider, Routes, Route, Navigate } from 'react-router-dom';
+import { createBrowserRouter, RouterProvider } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { AuthProvider } from './providers/AuthProvider';
 import BookingPage from './pages/BookingPage';
@@ -9,6 +9,7 @@ import RiderPortal from './pages/RiderPortal';
 import DriverLogin from './pages/DriverLogin';
 import RiderLogin from './pages/RiderLogin';
 import DriverRegistration from './pages/DriverRegistration';
+import DriverSignup from './pages/DriverSignup';
 import DriverTutorialPage from './pages/DriverTutorialPage';
 import FindDrivers from './pages/FindDrivers';
 import { OnboardingFlow } from './pages/onboarding/OnboardingFlow';
@@ -50,7 +51,7 @@ const routes = [
   },
   {
     path: "/driver/signup",
-    element: <DriverRegistration />,
+    element: <DriverSignup />,
   },
   {
     path: "/driver/register",
@@ -132,9 +133,9 @@ const router = {
     v7_relativeSplatPath: true,
     v7_fetcherPersist: true,
     v7_normalizeFormMethod: true,
-    v7_partialHydration: true,
-    v7_skipActionErrorRevalidation: true,
+    v7_prependBasename: true
   },
+  basename: '/'
 };
 
 function App() {
