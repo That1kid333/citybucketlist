@@ -34,30 +34,101 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [driverData, setDriverData] = useState<Driver | null>(null);
   const [isCheckingDriver, setIsCheckingDriver] = useState(false);
 
-  const fetchDriverData = async (uid: string) => {
-    try {
-      setIsCheckingDriver(true);
-      console.log('Fetching driver data for:', uid);
-      
-      // First check if the driver document exists
-      const driverRef = doc(db, 'drivers', uid);
+  useEffect(() => {
+    console.log('Setting up auth state listener');
+    let mounted = true;
+    
+    const unsubscribe = onAuthStateChanged(auth, async (authUser) => {
+      try {
+        console.log('Auth state changed. User:', authUser?.email);
+        if (!mounted) return;
+        
+        setLoading(true);
+        setError(null);
+        
+        if (authUser) {
+          // Set the user immediately
+          setUser(authUser);
+          
+          // Then try to fetch or create driver data
+          const driverRef = doc(db, 'drivers', authUser.uid);
+          const driverDoc = await getDoc(driverRef);
+          
+          if (driverDoc.exists()) {
+            console.log('Driver data found:', driverDoc.data());
+            setDriverData({
+              ...driverDoc.data(),
+              id: authUser.uid
+            } as Driver);
+          } else {
+            console.log('Creating new driver document');
+            const newDriverData: Driver = {
+              id: authUser.uid,
+              name: authUser.displayName || '',
+              email: authUser.email || '',
+              photoURL: authUser.photoURL || '',
+              rating: 5,
+              locationId: 'swfl',
+              vehicle: {
+                make: '',
+                model: '',
+                year: '',
+                color: '',
+                licensePlate: ''
+              },
+              available: true,
+              createdAt: new Date().toISOString(),
+              lastActive: new Date().toISOString()
+            };
+            
+            await setDoc(driverRef, newDriverData);
+            setDriverData(newDriverData);
+            console.log('Created new driver document:', newDriverData);
+          }
+        } else {
+          setUser(null);
+          setDriverData(null);
+          console.log('No user logged in, clearing driver data');
+        }
+      } catch (err) {
+        console.error('Error in auth state change:', err);
+        if (mounted) {
+          setError(err instanceof Error ? err.message : 'An error occurred');
+          // Don't clear user data on error, only driver data
+          setDriverData(null);
+        }
+      } finally {
+        if (mounted) {
+          setLoading(false);
+        }
+      }
+    });
+
+    return () => {
+      mounted = false;
+      unsubscribe();
+      console.log('Cleaned up auth state listener');
+    };
+  }, []);
+
+  const refreshDriverData = async () => {
+    if (user) {
+      const driverRef = doc(db, 'drivers', user.uid);
       const driverDoc = await getDoc(driverRef);
       
       if (driverDoc.exists()) {
-        const data = driverDoc.data() as Driver;
-        console.log('Driver data found:', data);
+        console.log('Driver data found:', driverDoc.data());
         setDriverData({
-          ...data,
-          id: uid // Ensure ID is set correctly
-        });
+          ...driverDoc.data(),
+          id: user.uid
+        } as Driver);
       } else {
-        // If the driver document doesn't exist, create it with default values
         console.log('Creating new driver document');
         const newDriverData: Driver = {
-          id: uid,
-          name: user?.displayName || '',
-          email: user?.email || '',
-          photoURL: user?.photoURL || '',
+          id: user.uid,
+          name: user.displayName || '',
+          email: user.email || '',
+          photoURL: user.photoURL || '',
           rating: 5,
           locationId: 'swfl',
           vehicle: {
@@ -76,59 +147,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setDriverData(newDriverData);
         console.log('Created new driver document:', newDriverData);
       }
-    } catch (err) {
-      console.error('Error fetching/creating driver data:', err);
-      setError(err instanceof Error ? err.message : 'An error occurred');
-      setDriverData(null);
-    } finally {
-      setIsCheckingDriver(false);
-    }
-  };
-
-  useEffect(() => {
-    console.log('Setting up auth state listener');
-    let mounted = true;
-    
-    const unsubscribe = onAuthStateChanged(auth, async (user) => {
-      try {
-        console.log('Auth state changed. User:', user?.email);
-        if (!mounted) return;
-        
-        setLoading(true);
-        setError(null);
-        
-        if (user) {
-          setUser(user);
-          await fetchDriverData(user.uid);
-        } else {
-          setUser(null);
-          setDriverData(null);
-          console.log('No user logged in, clearing driver data');
-        }
-      } catch (err) {
-        console.error('Error in auth state change:', err);
-        if (mounted) {
-          setError(err instanceof Error ? err.message : 'An error occurred');
-          setUser(null);
-          setDriverData(null);
-        }
-      } finally {
-        if (mounted) {
-          setLoading(false);
-        }
-      }
-    });
-
-    return () => {
-      mounted = false;
-      console.log('Cleaning up auth state listener');
-      unsubscribe();
-    };
-  }, []);
-
-  const refreshDriverData = async () => {
-    if (user) {
-      await fetchDriverData(user.uid);
     }
   };
 
