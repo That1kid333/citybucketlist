@@ -111,14 +111,16 @@ export async function handleRedirectResult(): Promise<Driver | null> {
     
     if (driverDoc.exists()) {
       console.log('Existing driver found');
-      const driverData = driverDoc.data() as Driver;
+      const driverData = driverDoc.data();
       return {
         id: user.uid,
         ...driverData,
         email: user.email || driverData.email,
         name: user.displayName || driverData.name,
-        photoURL: user.photoURL || driverData.photoURL
-      };
+        photoURL: user.photoURL || driverData.photoURL,
+        createdAt: driverData.created_at || driverData.createdAt,
+        updatedAt: driverData.updated_at || driverData.updatedAt
+      } as Driver;
     }
 
     // Create new driver document
@@ -130,12 +132,9 @@ export async function handleRedirectResult(): Promise<Driver | null> {
       photoURL: user.photoURL || '',
       phone: '',
       vehicle: null,
-      locationId: '',
       available: false,
-      isActive: true,
-      rating: 5.0,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString()
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
     };
 
     await setDoc(driverRef, driverData);

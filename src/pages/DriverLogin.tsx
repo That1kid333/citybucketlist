@@ -32,7 +32,7 @@ function DriverLogin() {
           
           if (!driver.vehicle || !driver.phone) {
             console.log('Driver needs to complete registration');
-            navigate('/driver/register');
+            navigate('/driver/registration');
           } else {
             console.log('Driver fully registered, navigating to portal');
             navigate('/driver/portal');
@@ -57,6 +57,7 @@ function DriverLogin() {
       setError('');
       setIsLoading(true);
       await signInWithGoogle();
+      // Note: Don't set isLoading to false here as we're redirecting
     } catch (error) {
       console.error('Error signing in with Google:', error);
       const message = error instanceof Error ? error.message : 'Failed to sign in with Google';
@@ -79,8 +80,10 @@ function DriverLogin() {
       const driver = await loginDriver(validationResult.email, validationResult.password);
       
       if (!driver.vehicle || !driver.phone) {
-        navigate('/driver/register');
+        console.log('Driver needs to complete registration');
+        navigate('/driver/registration');
       } else {
+        console.log('Driver fully registered, navigating to portal');
         navigate('/driver/portal');
       }
       
@@ -88,7 +91,6 @@ function DriverLogin() {
     } catch (error) {
       console.error('Login error:', error);
       
-      // Handle different types of errors
       if (error instanceof z.ZodError) {
         const message = error.errors[0]?.message || 'Please check your email and password';
         setError(message);
@@ -97,12 +99,7 @@ function DriverLogin() {
         const message = error instanceof Error ? error.message : 'Failed to log in';
         setError(message);
         toast.error(message);
-        
-        // Clear password on authentication error
-        setFormData(prev => ({
-          ...prev,
-          password: ''
-        }));
+        setFormData(prev => ({ ...prev, password: '' }));
       }
     } finally {
       setIsLoading(false);
