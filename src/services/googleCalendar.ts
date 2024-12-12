@@ -2,24 +2,32 @@ import { google } from 'googleapis';
 
 const SCOPES = ['https://www.googleapis.com/auth/calendar'];
 
-const oauth2Client = new google.auth.OAuth2(
-  process.env.VITE_GOOGLE_CLIENT_ID,
-  process.env.VITE_GOOGLE_CLIENT_SECRET,
-  `${window.location.origin}/auth/google/callback`
-);
-
 export const getAuthUrl = () => {
-  return oauth2Client.generateAuthUrl({
-    access_type: 'offline',
-    scope: SCOPES,
-  });
+  const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
+  const redirectUri = `${window.location.origin}/auth/google/callback`;
+  
+  const url = new URL('https://accounts.google.com/o/oauth2/v2/auth');
+  url.searchParams.append('client_id', clientId);
+  url.searchParams.append('redirect_uri', redirectUri);
+  url.searchParams.append('response_type', 'token');
+  url.searchParams.append('scope', SCOPES.join(' '));
+  url.searchParams.append('access_type', 'offline');
+  url.searchParams.append('prompt', 'consent');
+  
+  return url.toString();
 };
 
-export const handleAuthCallback = async (code: string) => {
-  const { tokens } = await oauth2Client.getToken(code);
-  oauth2Client.setCredentials(tokens);
-  localStorage.setItem('googleCalendarTokens', JSON.stringify(tokens));
-  return tokens;
+export const handleAuthCallback = async () => {
+  const hash = window.location.hash.substring(1);
+  const params = new URLSearchParams(hash);
+  const accessToken = params.get('access_token');
+  
+  if (!accessToken) {
+    throw new Error('No access token found in URL');
+  }
+  
+  localStorage.setItem('googleCalendarToken', accessToken);
+  return accessToken;
 };
 
 export const addEventToCalendar = async (event: {
@@ -28,46 +36,50 @@ export const addEventToCalendar = async (event: {
   start: { dateTime: string };
   end: { dateTime: string };
 }) => {
-  const tokens = localStorage.getItem('googleCalendarTokens');
-  if (!tokens) {
+  const accessToken = localStorage.getItem('googleCalendarToken');
+  if (!accessToken) {
     throw new Error('Not authenticated with Google Calendar');
   }
 
-  oauth2Client.setCredentials(JSON.parse(tokens));
-  const calendar = google.calendar({ version: 'v3', auth: oauth2Client });
+  const response = await fetch('https://www.googleapis.com/calendar/v3/calendars/primary/events', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${accessToken}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(event),
+  });
 
-  try {
-    const response = await calendar.events.insert({
-      calendarId: 'primary',
-      requestBody: event,
-    });
-    return response.data;
-  } catch (error) {
-    console.error('Error adding event to Google Calendar:', error);
-    throw error;
+  if (!response.ok) {
+    throw new Error('Failed to add event to Google Calendar');
   }
+
+  return response.json();
 };
 
 export const listEvents = async () => {
-  const tokens = localStorage.getItem('googleCalendarTokens');
-  if (!tokens) {
+  const accessToken = localStorage.getItem('googleCalendarToken');
+  if (!accessToken) {
     throw new Error('Not authenticated with Google Calendar');
   }
 
-  oauth2Client.setCredentials(JSON.parse(tokens));
-  const calendar = google.calendar({ version: 'v3', auth: oauth2Client });
+  const now = new Date().toISOString();
+  const url = new URL('https://www.googleapis.com/calendar/v3/calendars/primary/events');
+  url.searchParams.append('timeMin', now);
+  url.searchParams.append('maxResults', '10');
+  url.searchParams.append('singleEvents', 'true');
+  url.searchParams.append('orderBy', 'startTime');
 
-  try {
-    const response = await calendar.events.list({
-      calendarId: 'primary',
-      timeMin: new Date().toISOString(),
-      maxResults: 10,
-      singleEvents: true,
-      orderBy: 'startTime',
-    });
-    return response.data.items;
-  } catch (error) {
-    console.error('Error listing Google Calendar events:', error);
-    throw error;
+  const response = await fetch(url.toString(), {
+    headers: {
+      'Authorization': `Bearer ${accessToken}`,
+    },
+  });
+
+  if (!response.ok) {
+    throw new Error('Failed to fetch Google Calendar events');
   }
+
+  const data = await response.json();
+  return data.items;
 };
