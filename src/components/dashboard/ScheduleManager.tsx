@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Calendar, Clock, Plus, X } from 'lucide-react';
 import { format, startOfWeek, addDays, parseISO } from 'date-fns';
 import { useAuth } from '../../providers/AuthProvider';
-import { db } from '../../firebase';
+import { db } from '../../lib/firebase';
 import { collection, doc, setDoc, getDocs, deleteDoc, query, where } from 'firebase/firestore';
 import toast from 'react-hot-toast';
 
