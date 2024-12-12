@@ -5,34 +5,41 @@ import { auth, db } from '../lib/firebase';
 import { signOut } from 'firebase/auth';
 import { doc, getDoc } from 'firebase/firestore';
 import { Driver } from '../types/driver';
+import { useAuth } from '../providers/AuthProvider';
 
 export function Header() {
   const navigate = useNavigate();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
   const [driver, setDriver] = useState<Driver | null>(null);
-  const currentUser = auth.currentUser;
+  const { user } = useAuth();
 
   useEffect(() => {
     const fetchDriverData = async () => {
-      if (currentUser) {
-        try {
-          const driverDoc = await getDoc(doc(db, 'drivers', currentUser.uid));
-          if (driverDoc.exists()) {
-            setDriver({ id: driverDoc.id, ...driverDoc.data() } as Driver);
-          }
-        } catch (error) {
-          console.error('Error fetching driver data:', error);
+      if (!user) {
+        setDriver(null);
+        return;
+      }
+
+      try {
+        const driverDoc = await getDoc(doc(db, 'drivers', user.uid));
+        if (driverDoc.exists()) {
+          setDriver({ id: driverDoc.id, ...driverDoc.data() } as Driver);
         }
+      } catch (error) {
+        console.error('Error fetching driver data:', error);
+        setDriver(null);
       }
     };
 
     fetchDriverData();
-  }, [currentUser]);
+  }, [user]);
 
   const handleLogout = async () => {
     try {
+      setDriver(null); // Clear driver data before signing out
       await signOut(auth);
+      setIsProfileMenuOpen(false); // Close profile menu
       navigate('/');
     } catch (error) {
       console.error('Logout error:', error);
@@ -67,7 +74,7 @@ export function Header() {
               Find Drivers
             </Link>
             
-            {currentUser ? (
+            {user ? (
               <>
                 <Link to="/driver/portal" className="text-white hover:text-[#C69249]">
                   Driver Portal
@@ -138,7 +145,7 @@ export function Header() {
             Find Drivers
           </Link>
           
-          {currentUser ? (
+          {user ? (
             <>
               <div className="flex items-center justify-center space-x-2 py-2">
                 {driver?.photo ? (

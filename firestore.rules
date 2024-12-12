@@ -40,7 +40,7 @@ service cloud.firestore {
       allow read: if isAuthenticated();
       allow create: if isAuthenticated() && isOwner(driverId);
       allow update: if isOwner(driverId);
-      allow delete: if false; // Don't allow driver deletion
+      allow delete: if false;
 
       // Saved riders subcollection
       match /savedRiders/{riderId} {
@@ -53,7 +53,7 @@ service cloud.firestore {
       allow read: if isAuthenticated();
       allow create: if isAuthenticated() && isOwner(riderId);
       allow update: if isOwner(riderId);
-      allow delete: if false; // Don't allow rider deletion
+      allow delete: if false;
     }
 
     // Scheduled rides collection rules
@@ -97,7 +97,7 @@ service cloud.firestore {
       allow read: if isAuthenticated();
       allow create: if isAuthenticated();
       allow update: if isAuthenticated() && isRideParticipant(resource.data);
-      allow delete: if false; // Don't allow ride deletion
+      allow delete: if false;
     }
 
     // Locations collection rules
@@ -128,41 +128,25 @@ service cloud.firestore {
         resource.data.driverId == request.auth.uid || 
         resource.data.riderId == request.auth.uid
       );
-      allow delete: if false; // Chats cannot be deleted
+      allow delete: if false;
 
       // Messages in chat
       match /messages/{messageId} {
-        allow read: if isAuthenticated()
-          && get(/databases/$(database)/documents/chats/$(chatId)).data.driverId == request.auth.uid
-          || get(/databases/$(database)/documents/chats/$(chatId)).data.riderId == request.auth.uid;
-        allow create: if isAuthenticated()
-          && get(/databases/$(database)/documents/chats/$(chatId)).data.driverId == request.auth.uid
-          || get(/databases/$(database)/documents/chats/$(chatId)).data.riderId == request.auth.uid;
+        allow read: if isAuthenticated() && (
+          get(/databases/$(database)/documents/chats/$(chatId)).data.driverId == request.auth.uid ||
+          get(/databases/$(database)/documents/chats/$(chatId)).data.riderId == request.auth.uid
+        );
+        allow create: if isAuthenticated() && (
+          get(/databases/$(database)/documents/chats/$(chatId)).data.driverId == request.auth.uid ||
+          get(/databases/$(database)/documents/chats/$(chatId)).data.riderId == request.auth.uid
+        );
       }
     }
 
-    // Drivers collection rules
-    match /drivers/{driverId} {
-      allow read: if request.auth != null;
-      allow write: if request.auth != null && request.auth.uid == driverId;
-    }
-    
-    // Riders collection rules
-    match /riders/{riderId} {
-      allow read: if request.auth != null;
-      allow write: if request.auth != null && request.auth.uid == riderId;
-    }
-    
-    // Rides collection rules
-    match /rides/{rideId} {
-      allow read: if request.auth != null;
-      allow write: if request.auth != null;
-    }
-    
     // Time slots collection rules
     match /timeSlots/{slotId} {
-      allow read: if request.auth != null;
-      allow write: if request.auth != null;
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated();
     }
   }
 }
