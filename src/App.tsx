@@ -28,7 +28,7 @@ const router = createBrowserRouter(
       element: <DriversPage />,
     },
     {
-      path: "/driver-portal",
+      path: "/driver/portal",
       element: (
         <ProtectedRoute userType="driver">
           <DriverPortal />

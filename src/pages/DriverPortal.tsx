@@ -11,7 +11,6 @@ import { ScheduleManager } from '../components/dashboard/ScheduleManager';
 import { CommunicationHub } from '../components/dashboard/CommunicationHub';
 import { Settings } from '../components/dashboard/Settings';
 import { Driver } from '../types/driver';
-import { DriverSchedule } from '../components/dashboard/DriverSchedule';
 
 type DashboardView = 'overview' | 'rides' | 'earnings' | 'schedule' | 'messages' | 'settings';
 
@@ -58,37 +57,6 @@ export default function DriverPortal() {
     }
   };
 
-  const renderCurrentView = () => {
-    switch (currentView) {
-      case 'overview':
-        return <Overview 
-          driver={driver} 
-          isOnline={isOnline} 
-          onToggleOnline={handleToggleOnline} 
-        />;
-      case 'rides':
-        return driver?.id ? (
-          <RidesManagement driverId={driver.id} />
-        ) : (
-          <div className="p-4 text-red-600">Error: Driver ID not found</div>
-        );
-      case 'earnings':
-        return <EarningsCenter driver={driver} />;
-      case 'schedule':
-        return <DriverSchedule />;
-      case 'messages':
-        return <CommunicationHub driver={driver} />;
-      case 'settings':
-        return <Settings driver={driver} />;
-      default:
-        return <Overview 
-          driver={driver} 
-          isOnline={isOnline} 
-          onToggleOnline={handleToggleOnline} 
-        />;
-    }
-  };
-
   if (loading) {
     return (
       <div className="min-h-screen bg-black flex items-center justify-center">
@@ -111,14 +79,30 @@ export default function DriverPortal() {
   }
 
   return (
-    <div className="min-h-screen bg-black text-white">
+    <div className="min-h-screen bg-gray-100">
       <Header />
-      
-      <div className="flex">
-        <Sidebar currentView={currentView} onViewChange={setCurrentView} />
-        
-        <main className="flex-1 p-8">
-          {renderCurrentView()}
+      <div className="flex h-[calc(100vh-64px)]">
+        <Sidebar
+          currentView={currentView}
+          setCurrentView={setCurrentView}
+          isOnline={isOnline}
+          onToggleOnline={handleToggleOnline}
+        />
+        <main className="flex-1 overflow-y-auto p-6">
+          {loading ? (
+            <div className="flex items-center justify-center h-full">
+              <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-[#C69249]" />
+            </div>
+          ) : (
+            <>
+              {currentView === 'overview' && <Overview driver={driver} />}
+              {currentView === 'rides' && <RidesManagement driver={driver} />}
+              {currentView === 'earnings' && <EarningsCenter driver={driver} />}
+              {currentView === 'schedule' && <ScheduleManager driver={driver} />}
+              {currentView === 'messages' && <CommunicationHub driver={driver} />}
+              {currentView === 'settings' && <Settings driver={driver} />}
+            </>
+          )}
         </main>
       </div>
     </div>

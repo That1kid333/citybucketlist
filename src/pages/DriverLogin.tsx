@@ -69,38 +69,21 @@ function DriverLogin() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    try {
-      setError('');
-      setIsLoading(true);
+    setIsLoading(true);
+    setError('');
 
-      // Validate form data using Zod
-      const validationResult = loginSchema.parse(formData);
+    try {
+      // Validate form data
+      loginSchema.parse(formData);
       
-      // Attempt login
-      const driver = await loginDriver(validationResult.email, validationResult.password);
-      
-      if (!driver.vehicle || !driver.phone) {
-        console.log('Driver needs to complete registration');
-        navigate('/driver/registration');
-      } else {
-        console.log('Driver fully registered, navigating to portal');
-        navigate('/driver/portal');
-      }
-      
+      await loginDriver(formData.email, formData.password);
       toast.success('Successfully logged in!');
+      navigate('/driver/portal');
     } catch (error) {
       console.error('Login error:', error);
-      
-      if (error instanceof z.ZodError) {
-        const message = error.errors[0]?.message || 'Please check your email and password';
-        setError(message);
-        toast.error(message);
-      } else {
-        const message = error instanceof Error ? error.message : 'Failed to log in';
-        setError(message);
-        toast.error(message);
-        setFormData(prev => ({ ...prev, password: '' }));
-      }
+      const message = error instanceof Error ? error.message : 'Failed to log in';
+      setError(message);
+      toast.error(message);
     } finally {
       setIsLoading(false);
     }
