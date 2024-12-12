@@ -12,6 +12,7 @@ interface TimeSlot {
   startTime: string;
   endTime: string;
   userId: string;
+  title: string;
 }
 
 export function ScheduleManager() {
@@ -20,7 +21,8 @@ export function ScheduleManager() {
   const [newSlot, setNewSlot] = useState<Omit<TimeSlot, 'id' | 'userId'>>({
     day: 'Monday',
     startTime: '09:00',
-    endTime: '17:00'
+    endTime: '17:00',
+    title: ''
   });
   const [isLoading, setIsLoading] = useState(true);
   const { user } = useAuth();
@@ -74,6 +76,7 @@ export function ScheduleManager() {
       await setDoc(timeSlotRef, {
         ...newSlot,
         userId: user.uid,
+        title: newSlot.title,
         createdAt: new Date().toISOString()
       });
       
@@ -84,7 +87,8 @@ export function ScheduleManager() {
       setNewSlot({
         day: 'Monday',
         startTime: '09:00',
-        endTime: '17:00'
+        endTime: '17:00',
+        title: ''
       });
     } catch (error) {
       console.error('Error adding time slot:', error);
@@ -142,7 +146,7 @@ export function ScheduleManager() {
                         className="bg-[#F5A623]/10 text-[#F5A623] rounded p-2 mb-2 text-sm group hover:bg-[#F5A623]/20 transition-colors"
                       >
                         <div className="flex items-center justify-between">
-                          <span>{format(parseISO(`2000-01-01T${slot.startTime}`), 'h:mm a')}</span>
+                          <span className="font-medium">{slot.title || 'Untitled Event'}</span>
                           <button
                             onClick={() => handleRemoveSlot(slot.id)}
                             className="text-neutral-400 hover:text-white opacity-0 group-hover:opacity-100 transition-opacity"
@@ -150,7 +154,10 @@ export function ScheduleManager() {
                             <X className="w-4 h-4" />
                           </button>
                         </div>
-                        <div>{format(parseISO(`2000-01-01T${slot.endTime}`), 'h:mm a')}</div>
+                        <div className="text-neutral-400 mt-1">
+                          {format(parseISO(`2000-01-01T${slot.startTime}`), 'h:mm a')} - 
+                          {format(parseISO(`2000-01-01T${slot.endTime}`), 'h:mm a')}
+                        </div>
                       </div>
                     ))}
                 </div>
@@ -175,6 +182,19 @@ export function ScheduleManager() {
             </div>
 
             <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-neutral-400 mb-1">
+                  Event Title
+                </label>
+                <input
+                  type="text"
+                  value={newSlot.title}
+                  onChange={(e) => setNewSlot(prev => ({ ...prev, title: e.target.value }))}
+                  placeholder="Enter event title"
+                  className="w-full bg-neutral-800 border border-neutral-700 rounded-lg px-4 py-2"
+                />
+              </div>
+
               <div>
                 <label className="block text-sm font-medium text-neutral-400 mb-1">
                   Day

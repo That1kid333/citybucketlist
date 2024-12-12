@@ -17,9 +17,87 @@ service cloud.firestore {
       );
     }
 
-    // Allow read and write access to all collections for authenticated users
-    match /{document=**} {
-      allow read, write: if isAuthenticated();
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function hasValidFields(requiredFields) {
+      return request.resource.data.keys().hasAll(requiredFields);
+    }
+
+    // Drivers collection rules
+    match /drivers/{driverId} {
+      allow read: if true; // Allow public read for driver profiles
+      allow create: if isAuthenticated() && isOwner(driverId) && 
+        hasValidFields(['name', 'email', 'locationId', 'vehicle']);
+      allow update: if isOwner(driverId) || 
+        (isAuthenticated() && request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(['available', 'lastActive', 'location', 'photoURL']));
+      allow delete: if false; // Don't allow driver deletion
+    }
+
+    // Rides collection rules
+    match /rides/{rideId} {
+      allow read: if true; // Allow public read for ride listings
+      allow create: if isAuthenticated() && 
+        hasValidFields(['driverId', 'riderId', 'status', 'pickupLocation', 'dropoffLocation']);
+      allow update: if isRideParticipant(resource.data) && 
+        request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(['status', 'rating', 'review', 'completedAt']);
+      allow delete: if false; // Don't allow ride deletion
+    }
+
+    // Time slots collection rules
+    match /timeSlots/{timeSlotId} {
+      allow read: if true; // Allow public read for available time slots
+      allow create: if isAuthenticated() && 
+        isOwner(request.resource.data.userId) &&
+        hasValidFields(['userId', 'day', 'startTime', 'endTime']);
+      allow update: if isOwner(resource.data.userId) &&
+        request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(['startTime', 'endTime']);
+      allow delete: if isOwner(resource.data.userId);
+    }
+
+    // Messages collection rules
+    match /messages/{messageId} {
+      allow read: if isAuthenticated() && 
+        (request.auth.uid == resource.data.senderId || 
+         request.auth.uid == resource.data.recipientId);
+      allow create: if isAuthenticated() && 
+        isOwner(request.resource.data.senderId) &&
+        hasValidFields(['senderId', 'recipientId', 'content', 'timestamp']);
+      allow update: if false; // Messages cannot be edited
+      allow delete: if false; // Messages cannot be deleted
+    }
+
+    // Notifications collection rules
+    match /notifications/{notificationId} {
+      allow read: if isAuthenticated() && 
+        (request.auth.uid == resource.data.recipientId);
+      allow create: if isAuthenticated() && 
+        hasValidFields(['recipientId', 'type', 'content', 'timestamp']);
+      allow update: if isAuthenticated() && 
+        request.auth.uid == resource.data.recipientId &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status']);
+      allow delete: if isAuthenticated() && 
+        request.auth.uid == resource.data.recipientId;
+    }
+
+    // Reviews collection rules
+    match /reviews/{reviewId} {
+      allow read: if true; // Allow public read for reviews
+      allow create: if isAuthenticated() && 
+        hasValidFields(['reviewerId', 'targetId', 'rating', 'comment', 'timestamp']);
+      allow update: if isOwner(resource.data.reviewerId) &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['comment', 'rating']);
+      allow delete: if false; // Reviews cannot be deleted
+    }
+
+    // Locations collection rules
+    match /locations/{locationId} {
+      allow read: if true; // Allow public read for locations
+      allow write: if false; // Only admins can modify locations (via Admin SDK)
     }
   }
 }
