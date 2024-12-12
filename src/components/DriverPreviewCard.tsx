@@ -1,5 +1,5 @@
 import React from 'react';
-import { Star } from 'lucide-react';
+import { Star, Car } from 'lucide-react';
 import { Driver } from '../types/driver';
 
 interface DriverPreviewCardProps {
@@ -60,6 +60,14 @@ export const DriverPreviewCard: React.FC<DriverPreviewCardProps> = ({
             {driver.rating?.toFixed(1) || '5.0'}
           </span>
         </div>
+
+        {/* License Plate */}
+        {driver.vehicle?.plate && (
+          <div className="flex items-center space-x-1 text-neutral-400">
+            <Car className="w-4 h-4" />
+            <span>Plate: {driver.vehicle.plate}</span>
+          </div>
+        )}
 
         {/* Action Buttons */}
         <div className="flex gap-2 w-full">

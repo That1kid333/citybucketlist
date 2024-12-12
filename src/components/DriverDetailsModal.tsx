@@ -90,7 +90,10 @@ export function DriverDetailsModal({
           {/* Action Button */}
           {onSelect && (
             <button
-              onClick={onSelect}
+              onClick={() => {
+                onSelect();
+                onClose();
+              }}
               className={`w-full mt-6 py-3 px-4 rounded-lg font-medium transition-colors ${
                 selected
                   ? 'bg-[#F5A623] text-white hover:bg-[#E09612]'
