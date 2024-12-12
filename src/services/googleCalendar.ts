@@ -1,154 +1,116 @@
 import { google } from 'googleapis';
+import type { calendar_v3 } from 'googleapis';
 
 const SCOPES = ['https://www.googleapis.com/auth/calendar'];
 
-export const getAuthUrl = () => {
-  const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
-  const redirectUri = `${window.location.origin}/auth/google/callback`;
-  
-  const url = new URL('https://accounts.google.com/o/oauth2/v2/auth');
-  url.searchParams.append('client_id', clientId);
-  url.searchParams.append('redirect_uri', redirectUri);
-  url.searchParams.append('response_type', 'code');
-  url.searchParams.append('scope', SCOPES.join(' '));
-  url.searchParams.append('access_type', 'offline');
-  url.searchParams.append('prompt', 'consent');
-  
-  return url.toString();
+const oauth2Client = new google.auth.OAuth2(
+  import.meta.env.VITE_GOOGLE_CLIENT_ID,
+  import.meta.env.VITE_GOOGLE_CLIENT_SECRET,
+  `${window.location.origin}/auth/google/callback`
+);
+
+const calendar = google.calendar({ version: 'v3', auth: oauth2Client });
+
+interface GoogleTokens {
+  access_token?: string;
+  refresh_token?: string;
+  scope?: string;
+  token_type?: string;
+  expiry_date?: number;
+}
+
+export const getAuthUrl = (): string => {
+  return oauth2Client.generateAuthUrl({
+    access_type: 'offline',
+    scope: SCOPES,
+    prompt: 'consent'
+  });
 };
 
-export const handleAuthCallback = async (code: string) => {
+export const handleAuthCallback = async (code: string): Promise<GoogleTokens> => {
   if (!code) {
-    throw new Error('No authorization code found in URL');
+    throw new Error('No authorization code provided');
   }
 
-  const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
-  const clientSecret = import.meta.env.VITE_GOOGLE_CLIENT_SECRET;
-  const redirectUri = `${window.location.origin}/auth/google/callback`;
-
-  const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/x-www-form-urlencoded',
-    },
-    body: new URLSearchParams({
-      code,
-      client_id: clientId,
-      client_secret: clientSecret,
-      redirect_uri: redirectUri,
-      grant_type: 'authorization_code',
-    }),
-  });
-
-  if (!tokenResponse.ok) {
-    throw new Error('Failed to get access token');
+  try {
+    const { tokens } = await oauth2Client.getToken(code);
+    oauth2Client.setCredentials(tokens);
+    
+    // Store tokens securely
+    if (tokens.refresh_token) {
+      localStorage.setItem('googleRefreshToken', tokens.refresh_token);
+    }
+    
+    return tokens;
+  } catch (error) {
+    console.error('Error getting tokens:', error);
+    throw error;
   }
-
-  const tokens = await tokenResponse.json();
-  localStorage.setItem('googleCalendarTokens', JSON.stringify(tokens));
-  return tokens;
 };
 
-export const addEventToCalendar = async (event: {
-  summary: string;
-  description: string;
-  start: { dateTime: string };
-  end: { dateTime: string };
-}) => {
-  const tokensStr = localStorage.getItem('googleCalendarTokens');
-  if (!tokensStr) {
-    throw new Error('Not authenticated with Google Calendar');
+export const addEventToCalendar = async (event: calendar_v3.Schema$Event): Promise<calendar_v3.Schema$Event> => {
+  try {
+    const refreshToken = localStorage.getItem('googleRefreshToken');
+    if (!refreshToken) {
+      throw new Error('No refresh token available');
+    }
+
+    await refreshAccessToken();
+    
+    const response = await calendar.events.insert({
+      calendarId: 'primary',
+      requestBody: event,
+    });
+
+    return response.data;
+  } catch (error) {
+    console.error('Error adding event to calendar:', error);
+    throw error;
   }
-
-  const tokens = JSON.parse(tokensStr);
-  let accessToken = tokens.access_token;
-
-  // Check if token needs refresh
-  if (tokens.expires_at && Date.now() >= tokens.expires_at) {
-    const refreshedTokens = await refreshAccessToken(tokens.refresh_token);
-    accessToken = refreshedTokens.access_token;
-  }
-
-  const response = await fetch('https://www.googleapis.com/calendar/v3/calendars/primary/events', {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${accessToken}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify(event),
-  });
-
-  if (!response.ok) {
-    throw new Error('Failed to add event to Google Calendar');
-  }
-
-  return response.json();
 };
 
-export const listEvents = async () => {
-  const tokensStr = localStorage.getItem('googleCalendarTokens');
-  if (!tokensStr) {
-    throw new Error('Not authenticated with Google Calendar');
+export const listEvents = async (): Promise<calendar_v3.Schema$Event[]> => {
+  try {
+    const refreshToken = localStorage.getItem('googleRefreshToken');
+    if (!refreshToken) {
+      throw new Error('No refresh token available');
+    }
+
+    await refreshAccessToken();
+
+    const response = await calendar.events.list({
+      calendarId: 'primary',
+      timeMin: new Date().toISOString(),
+      maxResults: 10,
+      singleEvents: true,
+      orderBy: 'startTime',
+    });
+
+    return response.data.items || [];
+  } catch (error) {
+    console.error('Error listing events:', error);
+    throw error;
   }
-
-  const tokens = JSON.parse(tokensStr);
-  let accessToken = tokens.access_token;
-
-  // Check if token needs refresh
-  if (tokens.expires_at && Date.now() >= tokens.expires_at) {
-    const refreshedTokens = await refreshAccessToken(tokens.refresh_token);
-    accessToken = refreshedTokens.access_token;
-  }
-
-  const now = new Date().toISOString();
-  const url = new URL('https://www.googleapis.com/calendar/v3/calendars/primary/events');
-  url.searchParams.append('timeMin', now);
-  url.searchParams.append('maxResults', '10');
-  url.searchParams.append('singleEvents', 'true');
-  url.searchParams.append('orderBy', 'startTime');
-
-  const response = await fetch(url.toString(), {
-    headers: {
-      'Authorization': `Bearer ${accessToken}`,
-    },
-  });
-
-  if (!response.ok) {
-    throw new Error('Failed to fetch Google Calendar events');
-  }
-
-  const data = await response.json();
-  return data.items;
 };
 
-async function refreshAccessToken(refreshToken: string) {
-  const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
-  const clientSecret = import.meta.env.VITE_GOOGLE_CLIENT_SECRET;
-
-  const response = await fetch('https://oauth2.googleapis.com/token', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/x-www-form-urlencoded',
-    },
-    body: new URLSearchParams({
-      client_id: clientId,
-      client_secret: clientSecret,
-      refresh_token: refreshToken,
-      grant_type: 'refresh_token',
-    }),
-  });
-
-  if (!response.ok) {
-    throw new Error('Failed to refresh access token');
+async function refreshAccessToken(): Promise<void> {
+  try {
+    const credentials = await oauth2Client.getCredentials();
+    if (!credentials.refresh_token) {
+      throw new Error('No refresh token available');
+    }
+    
+    const { tokens } = await oauth2Client.refreshAccessToken();
+    await oauth2Client.setCredentials(tokens);
+    
+    // Store the new tokens
+    localStorage.setItem('googleTokens', JSON.stringify({
+      access_token: tokens.access_token,
+      refresh_token: tokens.refresh_token || credentials.refresh_token,
+      expiry_date: tokens.expiry_date,
+    }));
+  } catch (error) {
+    console.error('Error refreshing access token:', error);
+    throw error;
   }
-
-  const tokens = await response.json();
-  tokens.expires_at = Date.now() + (tokens.expires_in * 1000);
-  
-  // Update stored tokens
-  const storedTokens = JSON.parse(localStorage.getItem('googleCalendarTokens') || '{}');
-  const updatedTokens = { ...storedTokens, ...tokens };
-  localStorage.setItem('googleCalendarTokens', JSON.stringify(updatedTokens));
-  
-  return updatedTokens;
 }

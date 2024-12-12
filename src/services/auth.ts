@@ -22,9 +22,12 @@ export async function registerDriver(email: string, password: string): Promise<D
     email: userCredential.user.email!,
     name: userCredential.user.displayName || '',
     phone: '',
-    vehicle: null,
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
+    locationId: '',
+    isActive: true,
+    available: false,
+    vehicle: undefined,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
   };
 
   console.log('Creating driver document in Firestore');
@@ -48,29 +51,22 @@ export async function loginDriver(email: string, password: string): Promise<Driv
         email: userCredential.user.email!,
         name: userCredential.user.displayName || '',
         phone: '',
-        vehicle: null,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
+        locationId: '',
+        isActive: true,
+        available: false,
+        vehicle: undefined,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
       };
+
       await setDoc(doc(db, 'drivers', userCredential.user.uid), driverData);
-      console.log('Driver document created successfully');
       return driverData;
     }
 
-    console.log('Driver document found');
-    return { id: driverDoc.id, ...driverDoc.data() } as Driver;
-  } catch (error: any) {
-    console.error('Login error:', error);
-    // Handle specific Firebase auth errors
-    if (error.code === 'auth/invalid-credential') {
-      throw new Error('Invalid email or password. Please try again.');
-    } else if (error.code === 'auth/too-many-requests') {
-      throw new Error('Too many failed login attempts. Please try again later.');
-    } else if (error.code === 'auth/user-disabled') {
-      throw new Error('This account has been disabled. Please contact support.');
-    } else {
-      throw new Error('Failed to log in. Please try again.');
-    }
+    return driverDoc.data() as Driver;
+  } catch (error) {
+    console.error('Error logging in driver:', error);
+    throw error;
   }
 }
 
@@ -94,55 +90,77 @@ export async function signInWithGoogle(): Promise<void> {
 
 export async function handleRedirectResult(): Promise<Driver | null> {
   try {
-    console.log('Checking for redirect result');
     const result = await getRedirectResult(auth);
-    
     if (!result) {
-      console.log('No redirect result found');
+      console.log('No redirect result');
       return null;
     }
 
-    const { user } = result;
-    console.log('Got redirect result for user:', user.email);
+    console.log('Got redirect result:', result.user.email);
+    const driverDoc = await getDoc(doc(db, 'drivers', result.user.uid));
 
-    // Check if driver document exists
-    const driverRef = doc(db, 'drivers', user.uid);
-    const driverDoc = await getDoc(driverRef);
-    
-    if (driverDoc.exists()) {
-      console.log('Existing driver found');
-      const driverData = driverDoc.data();
-      return {
-        id: user.uid,
-        ...driverData,
-        email: user.email || driverData.email,
-        name: user.displayName || driverData.name,
-        photoURL: user.photoURL || driverData.photoURL,
-        createdAt: driverData.created_at || driverData.createdAt,
-        updatedAt: driverData.updated_at || driverData.updatedAt
-      } as Driver;
+    if (!driverDoc.exists()) {
+      console.log('Creating new driver document');
+      const driverData: Driver = {
+        id: result.user.uid,
+        email: result.user.email!,
+        name: result.user.displayName || '',
+        photoURL: result.user.photoURL || undefined,
+        phone: '',
+        locationId: '',
+        isActive: true,
+        available: false,
+        vehicle: undefined,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      };
+
+      await setDoc(doc(db, 'drivers', result.user.uid), driverData);
+      return driverData;
     }
 
-    // Create new driver document
-    console.log('Creating new driver document');
-    const driverData: Driver = {
-      id: user.uid,
-      email: user.email!,
-      name: user.displayName || '',
-      photoURL: user.photoURL || '',
-      phone: '',
-      vehicle: null,
-      available: false,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
-    };
-
-    await setDoc(driverRef, driverData);
-    console.log('New driver document created');
-    return driverData;
-
+    return driverDoc.data() as Driver;
   } catch (error) {
     console.error('Error handling redirect result:', error);
+    throw error;
+  }
+}
+
+export async function handleAuthCallback(code: string): Promise<{
+  access_token: string;
+  refresh_token: string;
+  expiry_date: number;
+}> {
+  try {
+    console.log('Exchanging authorization code for tokens...');
+    const response = await fetch('https://oauth2.googleapis.com/token', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        code,
+        client_id: import.meta.env.VITE_GOOGLE_CLIENT_ID,
+        client_secret: import.meta.env.VITE_GOOGLE_CLIENT_SECRET,
+        redirect_uri: `${window.location.origin}/auth/google/callback`,
+        grant_type: 'authorization_code',
+      }),
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to exchange authorization code for tokens');
+    }
+
+    const data = await response.json();
+    console.log('Token exchange successful');
+
+    return {
+      access_token: data.access_token,
+      refresh_token: data.refresh_token,
+      expiry_date: Date.now() + (data.expires_in * 1000),
+    };
+  } catch (error) {
+    console.error('Error exchanging authorization code:', error);
     throw error;
   }
 }

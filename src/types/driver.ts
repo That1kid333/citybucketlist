@@ -24,6 +24,7 @@ export interface Driver {
   email: string;
   phone?: string;
   photoURL?: string;
+  photo?: string;
   locationId: string;
   isActive: boolean;
   available: boolean;
@@ -93,6 +94,7 @@ export const initialDriver: Partial<Driver> = {
   email: "",
   phone: "",
   photoURL: "",
+  photo: "",
   locationId: "",
   isActive: false,
   available: false,

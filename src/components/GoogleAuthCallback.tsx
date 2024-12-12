@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../providers/AuthProvider';
-import { handleRedirectResult } from '../services/auth';
+import { handleAuthCallback, handleRedirectResult } from '../services/auth';
 import { toast } from 'react-hot-toast';
 
 export function GoogleAuthCallback() {
@@ -12,42 +12,47 @@ export function GoogleAuthCallback() {
     const handleRedirect = async () => {
       try {
         console.log('Handling Google Auth callback...');
+        const code = new URLSearchParams(window.location.search).get('code');
+        if (!code) {
+          throw new Error('No authorization code found in URL');
+        }
+
+        // Get Google Calendar tokens
+        const tokens = await handleAuthCallback(code);
+        console.log('Google Calendar tokens received:', tokens);
+
+        // Get or create driver profile
         const driver = await handleRedirectResult();
-        
+        console.log('Driver data:', driver);
+
         if (driver) {
-          console.log('Driver data:', driver);
           toast.success('Successfully signed in!');
           
+          // Redirect based on profile completion
           if (!driver.vehicle || !driver.phone) {
-            console.log('Driver needs to complete registration');
-            navigate('/driver/registration');
+            navigate('/onboarding');
           } else {
-            console.log('Driver fully registered, navigating to portal');
-            navigate('/driver/portal');
+            navigate('/driver');
           }
         } else {
-          console.log('No redirect result found');
-          navigate('/driver/login');
+          toast.error('Failed to sign in');
+          navigate('/login');
         }
       } catch (error) {
-        console.error('Error handling redirect:', error);
-        toast.error('Failed to complete sign-in');
-        navigate('/driver/login');
+        console.error('Error in Google Auth callback:', error);
+        toast.error('Failed to authenticate with Google');
+        navigate('/login');
       }
     };
 
-    if (!user) {
-      handleRedirect();
-    } else {
-      navigate('/driver/portal');
-    }
-  }, [user, navigate]);
+    handleRedirect();
+  }, [navigate]);
 
   return (
-    <div className="min-h-screen bg-black flex items-center justify-center">
-      <div className="text-white text-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-[#C69249] mx-auto mb-4"></div>
-        <p>Completing sign-in...</p>
+    <div className="min-h-screen bg-black text-white flex items-center justify-center">
+      <div className="text-center">
+        <h1 className="text-2xl font-bold mb-4">Authenticating...</h1>
+        <p className="text-neutral-400">Please wait while we complete the sign-in process.</p>
       </div>
     </div>
   );
