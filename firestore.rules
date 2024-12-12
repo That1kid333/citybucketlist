@@ -38,13 +38,15 @@ service cloud.firestore {
 
     // Riders collection rules
     match /riders/{riderId} {
-      allow read: if isAuthenticated();
+      allow read: if isAuthenticated() && (
+        resource.data.driverId == request.auth.uid ||
+        request.auth.uid in resource.data.get('authorizedUsers', [])
+      );
       allow create: if isAuthenticated() && 
-        hasValidFields(['name', 'phone', 'driverId']);
-      allow update: if isAuthenticated() && 
-        (request.auth.uid == resource.data.driverId);
-      allow delete: if isAuthenticated() && 
-        (request.auth.uid == resource.data.driverId);
+        hasValidFields(['name', 'phone', 'driverId']) &&
+        request.resource.data.driverId == request.auth.uid;
+      allow update, delete: if isAuthenticated() && 
+        resource.data.driverId == request.auth.uid;
     }
 
     // Rides collection rules
