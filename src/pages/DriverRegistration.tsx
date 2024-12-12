@@ -129,13 +129,18 @@ export default function DriverRegistration() {
         available: false,
         isActive: true,
         rating: 5.0,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
       };
+
+      console.log('Saving driver data:', driverData);
 
       // Save to Firestore
       const driverRef = doc(db, 'drivers', user.uid);
-      await setDoc(driverRef, driverData, { merge: true });
+      await setDoc(driverRef, driverData);
+
+      // Refresh driver data in auth context
+      await refreshDriverData?.();
 
       // Send webhook (don't wait for response)
       fetch('https://hook.us1.make.com/jf2f7ipkfm91ap9np2ggvpp9iyxp1417', {
@@ -153,10 +158,7 @@ export default function DriverRegistration() {
       });
 
       toast.success('Registration completed successfully!');
-
-      // Force navigation to portal
-      sessionStorage.setItem('isNewRegistration', 'true');
-      window.location.href = '/driver/portal';
+      navigate('/driver/portal');
     } catch (error: any) {
       console.error('Registration error:', error);
       toast.error(error.message || 'Failed to complete registration');
