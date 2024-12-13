@@ -11,10 +11,11 @@ interface AuthContextType {
   driver: Driver | null;
   rider: Rider | null;
   loading: boolean;
+  userType: 'driver' | 'rider' | null;
   signInWithGoogle: () => Promise<void>;
   signOut: () => Promise<void>;
   refreshDriverData: () => Promise<void>;
-  refreshRiderData: () => Promise<void>;
+  refreshRiderData: () => Promise<Rider | null>;
 }
 
 const AuthContext = createContext<AuthContextType>({
@@ -22,10 +23,11 @@ const AuthContext = createContext<AuthContextType>({
   driver: null,
   rider: null,
   loading: true,
+  userType: null,
   signInWithGoogle: async () => {},
   signOut: async () => {},
   refreshDriverData: async () => {},
-  refreshRiderData: async () => {},
+  refreshRiderData: async () => null,
 });
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -192,26 +194,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const refreshRiderData = async () => {
-    if (!user) return;
-    
+    if (!user) return null;
     try {
       const riderRef = doc(db, 'riders', user.uid);
       const riderDoc = await getDoc(riderRef);
       
       if (riderDoc.exists()) {
-        const data = riderDoc.data();
-        setRider({
-          id: riderDoc.id,
-          ...data
-        } as Rider);
+        const data = { id: riderDoc.id, ...riderDoc.data() };
+        setRider(data as Rider);
+        return data;
       } else {
         setRider(null);
+        return null;
       }
     } catch (error) {
       console.error('Error refreshing rider data:', error);
       setRider(null);
+      return null;
     }
   };
+
+  // Compute userType based on driver and rider state
+  const userType = driver ? 'driver' : rider ? 'rider' : null;
 
   const isLoading = loading || (user && (driverLoading || riderLoading));
 
@@ -232,6 +236,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         driver,
         rider,
         loading: isLoading,
+        userType,
         signInWithGoogle,
         signOut,
         refreshDriverData,

@@ -76,12 +76,38 @@ const router = createBrowserRouter(
       element: <RiderRegistration />,
     },
     {
-      path: "/rider/portal",
+      path: "/rider/portal/*",
       element: (
         <ProtectedRoute userType="rider">
           <RiderPortal />
         </ProtectedRoute>
       ),
+      children: [
+        {
+          path: "",
+          element: <RiderPortal />
+        },
+        {
+          path: "rides",
+          element: <RiderPortal />
+        },
+        {
+          path: "schedule",
+          element: <RiderPortal />
+        },
+        {
+          path: "messages",
+          element: <RiderPortal />
+        },
+        {
+          path: "settings",
+          element: <RiderPortal />
+        },
+        {
+          path: "membership",
+          element: <RiderPortal />
+        }
+      ]
     },
     {
       path: "/driver-signup",
@@ -135,13 +161,13 @@ const router = createBrowserRouter(
   }
 );
 
-const App = () => {
+function App() {
   return (
     <AuthProvider>
       <RouterProvider router={router} />
       <Toaster position="top-right" reverseOrder={false} />
     </AuthProvider>
   );
-};
+}
 
 export default App;

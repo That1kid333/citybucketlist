@@ -42,9 +42,9 @@ export default function ProtectedRoute({ children, userType }: ProtectedRoutePro
       return <Navigate to="/driver/register" state={{ from: location }} replace />;
     }
   } else if (userType === 'rider') {
-    if (!rider) {
-      console.log('No rider data, redirecting to registration');
-      return <Navigate to="/rider/register" state={{ from: location }} replace />;
+    // For riders, we don't need to redirect to registration since they'll be registered during login
+    if (!rider && !loading) {
+      console.log('No rider data, but continuing to portal');
     }
   }
 

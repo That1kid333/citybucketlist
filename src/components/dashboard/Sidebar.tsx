@@ -1,4 +1,3 @@
-import React from 'react';
 import { useAuth } from '../../providers/AuthProvider';
 import {
   Home as HomeIcon,
@@ -42,6 +41,13 @@ export function Sidebar({ currentView, onViewChange, userType }: SidebarProps) {
 
   return (
     <div className="w-64 bg-zinc-900 min-h-screen p-4">
+      <div className="p-4">
+        <img 
+          src="https://aiautomationsstorage.blob.core.windows.net/cbl/citybucketlist%20logo.png"
+          alt="CityBucketList.com"
+          className="h-8 object-contain mb-8"
+        />
+      </div>
       <nav className="space-y-2">
         {navItems.map(({ id, label, icon: Icon }) => (
           <button

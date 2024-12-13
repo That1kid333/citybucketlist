@@ -19,10 +19,19 @@ export default function RiderLogin() {
   const onFinish = async (values: LoginFormData) => {
     setLoading(true);
     try {
+      // First sign in the user
       await signInWithEmailAndPassword(auth, values.email, values.password);
-      await refreshRiderData(); // Make sure rider data is loaded
-      message.success('Login successful!');
-      navigate('/rider/portal');
+      
+      // Then refresh rider data and wait for it
+      const riderData = await refreshRiderData();
+      
+      if (riderData && riderData.id) {
+        message.success('Login successful!');
+        navigate('/rider/portal');
+      } else {
+        message.info('Please complete registration');
+        navigate('/rider/register');
+      }
     } catch (error) {
       console.error('Error logging in:', error);
       message.error('Invalid email or password');

@@ -12,7 +12,6 @@ import { SavedRiders } from '../components/dashboard/SavedRiders';
 import { Settings } from '../components/dashboard/Settings';
 import { RidersManagement } from '../components/dashboard/RidersManagement';
 import DriverRegistration from './DriverRegistration';
-import { DashboardLayout } from '../layouts/DashboardLayout';
 import { Driver } from '../types/driver';
 
 type DashboardView = 'overview' | 'rides' | 'schedule' | 'messages' | 'manage-riders' | 'settings';
@@ -74,11 +73,14 @@ export default function DriverPortal() {
   };
 
   return (
-    <DashboardLayout>
+    <div className="flex h-screen bg-neutral-950">
       <Sidebar currentView={currentView} onViewChange={setCurrentView} userType="driver" />
-      <main className="flex-1 overflow-y-auto p-6">
-        {renderContent()}
-      </main>
-    </DashboardLayout>
+      <div className="flex-1 flex flex-col overflow-hidden">
+        <Header user={user} />
+        <main className="flex-1 overflow-y-auto p-6">
+          {renderContent()}
+        </main>
+      </div>
+    </div>
   );
 }

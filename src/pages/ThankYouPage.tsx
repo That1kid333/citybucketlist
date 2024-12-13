@@ -6,11 +6,6 @@ export function ThankYouPage() {
     <div className="min-h-screen bg-neutral-950">
       <Header />
       <main className="container mx-auto px-4 py-16 text-center">
-        <img 
-          src="https://aiautomationsstorage.blob.core.windows.net/cbl/citybucketlist%20logo.png"
-          alt="CityBucketList.com"
-          className="h-16 mx-auto mb-8"
-        />
         <h1 className="text-4xl font-bold text-[#F5A623] mb-4">Thank You!</h1>
         <p className="text-xl text-neutral-300 mb-8">
           Your registration has been successfully submitted.

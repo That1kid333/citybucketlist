@@ -20,92 +20,42 @@ export const vehicleSchema = z.object({
 
 export interface Driver {
   id: string;
-  name: string;
+  firstName: string;
+  lastName: string;
   email: string;
-  phone?: string;
-  photoURL?: string;
-  photo?: string;
-  locationId: string;
-  isActive: boolean;
-  available: boolean;
+  phoneNumber: string;
+  location: string;
+  isOnline: boolean;
   rating?: number;
+  totalRides?: number;
+  completedRides?: number;
   vehicle?: {
     make: string;
     model: string;
-    year: string;
+    year: number;
     color: string;
-    plate: string;
-    insurance?: {
-      provider: string;
-      policyNumber: string;
-      expirationDate: string;
-      documentUrl: string;
-    };
-    registration?: {
-      expirationDate: string;
-      documentUrl: string;
-    };
+    licensePlate: string;
   };
-  driversLicense?: {
-    number: string;
-    expirationDate: string;
-    documentUrl: string;
-  };
-  backgroundCheck?: {
-    status: "pending" | "approved" | "rejected";
-    submissionDate: string;
-    documentUrl?: string;
-  };
-  subscription?: {
-    status: "trial" | "active" | "inactive" | "cancelled";
-    plan: "elite";
-    startDate: string;
-    trialEndDate?: string;
-    nextBillingDate: string;
-  };
-  metrics?: {
-    totalRides: number;
-    yearsActive: number;
-    completionRate: number;
-    averageResponseTime: number;
-  };
-  schedule?: Array<{
-    day: string;
-    hours: string;
-  }>;
-  recentActivity?: Array<{
-    action: string;
-    time: string;
-  }>;
-  // Dashboard specific fields
-  totalRides?: number;
-  hoursOnline?: number;
-  todayRides?: number;
-  acceptanceRate?: number;
-  responseTime?: number;
-  lastShiftEnd?: string;
-  created_at: string;
-  updated_at: string;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 export const initialDriver: Partial<Driver> = {
   id: "",
-  name: "",
+  firstName: "",
+  lastName: "",
   email: "",
-  phone: "",
-  photoURL: "",
-  photo: "",
-  locationId: "",
-  isActive: false,
-  available: false,
+  phoneNumber: "",
+  location: "",
+  isOnline: false,
   rating: 5.0,
   vehicle: {
     make: "",
     model: "",
-    year: "",
+    year: 0,
     color: "",
-    plate: ""
+    licensePlate: ""
   },
-  created_at: new Date().toISOString(),
-  updated_at: new Date().toISOString()
+  createdAt: new Date(),
+  updatedAt: new Date()
 };
