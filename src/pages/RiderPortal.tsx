@@ -1,16 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../providers/AuthProvider';
-import { Layout, Avatar } from 'antd';
-import { doc, getDoc } from 'firebase/firestore';
+import { getDoc } from 'firebase/firestore';
 import { db, auth } from '../lib/firebase';
 import { Sidebar } from '../components/Sidebar';
 import { User } from 'lucide-react';
 import AvailableDrivers from '../components/AvailableDrivers';
 import RideBookingForm from '../components/RideBookingForm';
 import RiderOverview from '../components/RiderOverview';
+import { DashboardLayout } from '../layouts/DashboardLayout';
 import { Rider } from '../types/rider';
-
-const { Header, Content } = Layout;
 
 type DashboardView = 'overview' | 'rides' | 'schedule' | 'messages' | 'settings';
 
@@ -87,36 +85,16 @@ export default function RiderPortal() {
   }
 
   return (
-    <Layout className="min-h-screen">
-      <Sidebar 
-        currentView={currentView} 
-        onViewChange={setCurrentView}
-        userType="rider"
-      />
-      <Layout className="ml-64">
-        <Header className="bg-zinc-900 p-4 flex justify-between items-center">
-          <h1 className="text-white text-xl">Rider Dashboard</h1>
-          <div className="flex items-center space-x-2">
-            <Avatar 
-              className="bg-[#C69249]"
-              icon={userInitials ? null : <User />}
-            >
-              {userInitials}
-            </Avatar>
-          </div>
-        </Header>
-        <Content className="p-6 bg-zinc-900">
-          {renderCurrentView()}
-          <div className="mt-8">
-            <h2 className="text-white text-xl mb-4">Available Drivers</h2>
-            <AvailableDrivers />
-          </div>
-          <div className="mt-8">
-            <h2 className="text-white text-xl mb-4">Book a Ride</h2>
-            <RideBookingForm />
-          </div>
-        </Content>
-      </Layout>
-    </Layout>
+    <DashboardLayout>
+      {renderCurrentView()}
+      <div className="mt-8">
+        <h2 className="text-white text-xl mb-4">Available Drivers</h2>
+        <AvailableDrivers />
+      </div>
+      <div className="mt-8">
+        <h2 className="text-white text-xl mb-4">Book a Ride</h2>
+        <RideBookingForm />
+      </div>
+    </DashboardLayout>
   );
 }
