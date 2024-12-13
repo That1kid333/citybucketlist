@@ -52,8 +52,12 @@ export function Header() {
     <header className="bg-black py-4">
       <div className="container mx-auto px-4">
         <div className="flex justify-between items-center">
-          <Link to="/" className="text-white text-2xl font-bold">
-            City Bucket List
+          <Link to="/" className="flex items-center">
+            <img 
+              src="https://aiautomationsstorage.blob.core.windows.net/cbl/citybucketlist%20logo.png"
+              alt="CityBucketList.com"
+              className="h-8 object-contain"
+            />
           </Link>
 
           {/* Desktop Navigation */}

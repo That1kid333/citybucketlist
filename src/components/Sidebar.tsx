@@ -71,11 +71,13 @@ export function Sidebar({ userType: propUserType }: Props) {
   return (
     <div className="w-64 bg-zinc-900 h-screen fixed left-0 top-0 overflow-y-auto">
       <div className="p-4">
-        <img 
-          src="https://aiautomationsstorage.blob.core.windows.net/cbl/citybucketlist%20logo.png"
-          alt="CityBucketList.com"
-          className="h-8 object-contain mb-8"
-        />
+        <Link to="/">
+          <img 
+            src="https://aiautomationsstorage.blob.core.windows.net/cbl/citybucketlist%20logo.png"
+            alt="CityBucketList.com"
+            className="h-8 object-contain mb-8"
+          />
+        </Link>
         
         <nav className="space-y-2">
           {items.map((item) => {
