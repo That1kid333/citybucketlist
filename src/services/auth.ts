@@ -25,9 +25,15 @@ export async function registerDriver(email: string, password: string): Promise<D
     locationId: '',
     isActive: true,
     available: false,
-    vehicle: undefined,
+    vehicle: {
+      make: '',
+      model: '',
+      year: '',
+      color: '',
+      plate: ''
+    },
     created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
+    updated_at: new Date().toISOString()
   };
 
   console.log('Creating driver document in Firestore');
@@ -45,22 +51,8 @@ export async function loginDriver(email: string, password: string): Promise<Driv
 
     const driverDoc = await getDoc(doc(db, 'drivers', userCredential.user.uid));
     if (!driverDoc.exists()) {
-      console.log('Driver document does not exist, creating new one');
-      const driverData: Driver = {
-        id: userCredential.user.uid,
-        email: userCredential.user.email!,
-        name: userCredential.user.displayName || '',
-        phone: '',
-        locationId: '',
-        isActive: true,
-        available: false,
-        vehicle: undefined,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      };
-
-      await setDoc(doc(db, 'drivers', userCredential.user.uid), driverData);
-      return driverData;
+      console.log('No driver profile found');
+      throw new Error('No driver profile found. Please register first.');
     }
 
     return driverDoc.data() as Driver;
@@ -99,27 +91,13 @@ export async function handleRedirectResult(): Promise<Driver | null> {
     console.log('Got redirect result:', result.user.email);
     const driverDoc = await getDoc(doc(db, 'drivers', result.user.uid));
 
-    if (!driverDoc.exists()) {
-      console.log('Creating new driver document');
-      const driverData: Driver = {
-        id: result.user.uid,
-        email: result.user.email!,
-        name: result.user.displayName || '',
-        photoURL: result.user.photoURL || undefined,
-        phone: '',
-        locationId: '',
-        isActive: true,
-        available: false,
-        vehicle: undefined,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      };
-
-      await setDoc(doc(db, 'drivers', result.user.uid), driverData);
-      return driverData;
+    if (driverDoc.exists()) {
+      console.log('Driver profile found');
+      return driverDoc.data() as Driver;
     }
 
-    return driverDoc.data() as Driver;
+    console.log('No driver profile found');
+    return null;
   } catch (error) {
     console.error('Error handling redirect result:', error);
     throw error;

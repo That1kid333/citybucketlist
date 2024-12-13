@@ -4,6 +4,10 @@ import react from '@vitejs/plugin-react';
 export default defineConfig({
   plugins: [react()],
   base: '/',
+  server: {
+    port: 3169,
+    strictPort: true,
+  },
   build: {
     outDir: 'dist',
     sourcemap: true,
@@ -30,8 +34,5 @@ export default defineConfig({
   },
   optimizeDeps: {
     include: ['react-icons']
-  },
-  server: {
-    port: 3000
   }
 });

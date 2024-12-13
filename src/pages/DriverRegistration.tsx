@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { doc, setDoc } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { useAuth } from '../providers/AuthProvider';
 import { toast } from 'react-hot-toast';
-import { locations } from '../types/location';
 import { FormInput } from '../components/FormInput';
 import { vehicleMakes, vehicleColors, getModelsByMake } from '../data/vehicles';
+import { uploadToCloudinary } from '../lib/utils/cloudinaryUpload';
+import { locations } from '../types/location';
 
 interface RegistrationForm {
   phone: string;
@@ -18,16 +19,39 @@ interface RegistrationForm {
     plate: string;
   };
   locationId: string;
+  username: string;
+  photo: File | null;
+}
+
+interface Driver {
+  id: string;
+  name: string;
+  email: string;
+  phone: string;
+  photoURL: string;
+  vehicle: {
+    make: string;
+    model: string;
+    year: string;
+    color: string;
+    plate: string;
+  };
+  locationId: string;
+  available: boolean;
+  isActive: boolean;
+  rating: number;
+  created_at: string;
+  updated_at: string;
 }
 
 export default function DriverRegistration() {
   const navigate = useNavigate();
-  const location = useLocation();
   const { user, driver, loading, refreshDriverData } = useAuth();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [availableModels, setAvailableModels] = useState<string[]>([]);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
 
-  const [formData, setFormData] = useState<RegistrationForm>({
+  const initialState: RegistrationForm = {
     phone: '',
     vehicle: {
       make: '',
@@ -36,11 +60,22 @@ export default function DriverRegistration() {
       color: '',
       plate: ''
     },
-    locationId: ''
-  });
+    locationId: '',
+    username: '',
+    photo: null
+  };
 
-  // Update available models when make changes
+  const [formData, setFormData] = useState<RegistrationForm>(initialState);
+
   useEffect(() => {
+    // Only redirect if we've confirmed auth state and driver exists
+    if (!loading && driver) {
+      navigate('/driver/portal', { replace: true });
+    }
+  }, [loading, driver, navigate]);
+
+  useEffect(() => {
+    // Update available models when make changes
     if (formData.vehicle.make) {
       const models = getModelsByMake(formData.vehicle.make);
       setAvailableModels(models);
@@ -56,18 +91,7 @@ export default function DriverRegistration() {
     }
   }, [formData.vehicle.make]);
 
-  // Handle navigation when no user or when driver data already exists
-  useEffect(() => {
-    if (!loading) {
-      if (!user) {
-        navigate('/driver/login');
-      } else if (driver) {
-        navigate('/driver/portal');
-      }
-    }
-  }, [user, driver, loading, navigate]);
-
-  // Return loading state instead of null
+  // Show loading spinner while auth state is being determined
   if (loading) {
     return (
       <div className="min-h-screen bg-black flex items-center justify-center">
@@ -76,112 +100,92 @@ export default function DriverRegistration() {
     );
   }
 
-  // Return to login if no user
+  // Don't show the form if not logged in
   if (!user) {
     return null;
   }
 
-  // Redirect if driver already exists
+  // Don't show the form if already a driver
   if (driver) {
     return null;
   }
 
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    const { name, value } = e.target;
+    if (name.startsWith('vehicle.')) {
+      const field = name.split('.')[1];
+      setFormData(prev => ({
+        ...prev,
+        vehicle: {
+          ...prev.vehicle,
+          [field]: value
+        }
+      }));
+    } else {
+      setFormData(prev => ({
+        ...prev,
+        [name]: value
+      }));
+    }
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0] || null;
+    setSelectedFile(file);
+    setFormData(prev => ({
+      ...prev,
+      photo: file
+    }));
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!user) {
+      toast.error('You must be logged in to register as a driver');
+      return;
+    }
+
     setIsSubmitting(true);
 
     try {
-      // Validation
-      if (!formData.locationId) throw new Error('Please select a location');
-      if (!formData.phone.trim()) throw new Error('Phone number is required');
-      if (!formData.vehicle.make.trim()) throw new Error('Vehicle make is required');
-      if (!formData.vehicle.model.trim()) throw new Error('Vehicle model is required');
-      if (!formData.vehicle.year.trim()) throw new Error('Vehicle year is required');
-      if (!formData.vehicle.color.trim()) throw new Error('Vehicle color is required');
-      if (!formData.vehicle.plate.trim()) throw new Error('License plate is required');
-
-      // Year validation
-      const year = parseInt(formData.vehicle.year);
-      const currentYear = new Date().getFullYear();
-      if (isNaN(year) || year < 1900 || year > currentYear + 1) {
-        throw new Error(`Please enter a valid year between 1900 and ${currentYear + 1}`);
+      let photoURL = '';
+      if (selectedFile) {
+        photoURL = await uploadToCloudinary(selectedFile);
       }
 
-      // Phone validation
-      const phoneRegex = /^\+?[\d\s-()]{10,}$/;
-      if (!phoneRegex.test(formData.phone)) {
-        throw new Error('Please enter a valid phone number');
-      }
-
-      if (!user) {
-        throw new Error('No authenticated user found');
-      }
-
-      // Create driver document
-      const driverData = {
+      const driverData: Driver = {
         id: user.uid,
         name: user.displayName || '',
         email: user.email || '',
-        phone: formData.phone,
-        vehicle: formData.vehicle,
-        locationId: formData.locationId,
-        photoURL: user.photoURL || '',
+        phone: formData.phone || '',
+        photoURL: photoURL,
+        vehicle: {
+          make: formData.vehicle.make || '',
+          model: formData.vehicle.model || '',
+          year: formData.vehicle.year || '',
+          color: formData.vehicle.color || '',
+          plate: formData.vehicle.plate || ''
+        },
+        locationId: formData.locationId || '',
         available: false,
         isActive: true,
         rating: 5.0,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
       };
-
-      console.log('Saving driver data:', driverData);
 
       // Save to Firestore
       const driverRef = doc(db, 'drivers', user.uid);
       await setDoc(driverRef, driverData);
 
-      // Add a delay to ensure Firestore listener updates
-      await new Promise(resolve => setTimeout(resolve, 1500));
-
-      // Refresh driver data in auth context
-      if (refreshDriverData) {
-        await refreshDriverData();
-      }
-
-      // Send webhook (don't wait for response)
-      fetch('https://hook.us1.make.com/jf2f7ipkfm91ap9np2ggvpp9iyxp1417', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          ...driverData,
-          type: 'driver_registration',
-          timestamp: new Date().toISOString()
-        }),
-      }).catch(error => {
-        console.error('Webhook error:', error);
-      });
-
-      toast.success('Registration completed successfully!');
-      navigate('/driver/portal');
+      await refreshDriverData();
+      toast.success('Registration successful!');
+      navigate('/driver/portal', { replace: true });
     } catch (error: any) {
-      console.error('Registration error:', error);
+      console.error('Error during registration:', error);
       toast.error(error.message || 'Failed to complete registration');
     } finally {
       setIsSubmitting(false);
-    }
-  };
-
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    const { name, value } = e.target;
-    if (name.includes('.')) {
-      const [parent, child] = name.split('.');
-      setFormData(prev => ({
-        ...prev,
-        [parent]: { ...prev[parent as keyof RegistrationForm], [child]: value }
-      }));
-    } else {
-      setFormData(prev => ({ ...prev, [name]: value }));
     }
   };
 
@@ -212,7 +216,7 @@ export default function DriverRegistration() {
               <option value="">Select a location</option>
               {locations.map(location => (
                 <option key={location.id} value={location.id}>
-                  {location.name}
+                  {location.name}, {location.region}
                 </option>
               ))}
             </select>
@@ -226,6 +230,34 @@ export default function DriverRegistration() {
             onChange={handleChange}
             placeholder="+1 (555) 555-5555"
           />
+
+          <div className="mb-4">
+            <label htmlFor="username" className="block text-sm font-medium mb-2">
+              Username
+            </label>
+            <input
+              type="text"
+              id="username"
+              name="username"
+              value={formData.username}
+              onChange={handleChange}
+              className="w-full px-3 py-2 bg-neutral-800 border border-neutral-700 rounded-md focus:outline-none focus:ring-2 focus:ring-[#C69249]"
+              placeholder="Enter your username"
+            />
+          </div>
+
+          <div className="mb-4">
+            <label htmlFor="photo" className="block text-sm font-medium mb-2">
+              Profile Photo
+            </label>
+            <input
+              type="file"
+              id="photo"
+              name="photo"
+              onChange={handleFileChange}
+              className="w-full px-3 py-2 bg-neutral-800 border border-neutral-700 rounded-md focus:outline-none focus:ring-2 focus:ring-[#C69249]"
+            />
+          </div>
 
           <div className="space-y-4">
             <h2 className="text-xl font-semibold text-[#C69249]">Vehicle Information</h2>
@@ -244,8 +276,8 @@ export default function DriverRegistration() {
                 >
                   <option value="">Select make</option>
                   {vehicleMakes.map(make => (
-                    <option key={make} value={make}>
-                      {make}
+                    <option key={make.name} value={make.name}>
+                      {make.name}
                     </option>
                   ))}
                 </select>
@@ -264,8 +296,8 @@ export default function DriverRegistration() {
                   className="w-full px-3 py-2 bg-neutral-800 border border-neutral-700 rounded-md focus:outline-none focus:ring-2 focus:ring-[#C69249]"
                 >
                   <option value="">Select model</option>
-                  {availableModels.map(model => (
-                    <option key={model} value={model}>
+                  {availableModels.map((model, index) => (
+                    <option key={`${model}-${index}`} value={model}>
                       {model}
                     </option>
                   ))}
@@ -305,8 +337,8 @@ export default function DriverRegistration() {
                 >
                   <option value="">Select color</option>
                   {vehicleColors.map(color => (
-                    <option key={color} value={color}>
-                      {color}
+                    <option key={color.name} value={color.name}>
+                      {color.name}
                     </option>
                   ))}
                 </select>

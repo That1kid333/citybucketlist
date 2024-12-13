@@ -1,22 +1,21 @@
 import React from 'react';
+import { useAuth } from '../../providers/AuthProvider';
 import {
-  HomeIcon,
-  CarIcon,
-  WalletIcon,
-  CalendarIcon,
-  MessageSquareIcon,
-  SettingsIcon,
-  LogOutIcon,
+  Home as HomeIcon,
+  Car as CarIcon,
+  Calendar as CalendarIcon,
+  MessageCircle as MessageCircleIcon,
+  Settings as SettingsIcon,
   Users,
-  MessageCircle,
+  LogOut as LogOutIcon
 } from 'lucide-react';
-import { useAuth } from '../../hooks/useAuth';
-import { NavLink } from 'react-router-dom';
+
+type DashboardView = 'overview' | 'rides' | 'schedule' | 'messages' | 'manage-riders' | 'settings';
 
 interface SidebarProps {
-  currentView: string;
-  onViewChange: (view: string) => void;
-  userType: 'rider' | 'driver';
+  currentView: DashboardView;
+  onViewChange: (view: DashboardView) => void;
+  userType: 'driver' | 'rider';
 }
 
 export function Sidebar({ currentView, onViewChange, userType }: SidebarProps) {
@@ -25,9 +24,9 @@ export function Sidebar({ currentView, onViewChange, userType }: SidebarProps) {
   const driverNavItems = [
     { id: 'overview', label: 'Overview', icon: HomeIcon },
     { id: 'rides', label: 'Rides', icon: CarIcon },
-    { id: 'earnings', label: 'Earnings', icon: WalletIcon },
     { id: 'schedule', label: 'Schedule', icon: CalendarIcon },
-    { id: 'messages', label: 'Messages', icon: MessageSquareIcon },
+    { id: 'messages', label: 'Messages', icon: MessageCircleIcon },
+    { id: 'manage-riders', label: 'Manage Riders', icon: Users },
     { id: 'settings', label: 'Settings', icon: SettingsIcon },
   ];
 
@@ -35,7 +34,7 @@ export function Sidebar({ currentView, onViewChange, userType }: SidebarProps) {
     { id: 'overview', label: 'Overview', icon: HomeIcon },
     { id: 'rides', label: 'Rides', icon: CarIcon },
     { id: 'schedule', label: 'Schedule', icon: CalendarIcon },
-    { id: 'messages', label: 'Messages', icon: MessageSquareIcon },
+    { id: 'messages', label: 'Messages', icon: MessageCircleIcon },
     { id: 'settings', label: 'Settings', icon: SettingsIcon },
   ];
 
@@ -47,7 +46,7 @@ export function Sidebar({ currentView, onViewChange, userType }: SidebarProps) {
         {navItems.map(({ id, label, icon: Icon }) => (
           <button
             key={id}
-            onClick={() => onViewChange(id)}
+            onClick={() => onViewChange(id as DashboardView)}
             className={`w-full flex items-center space-x-3 px-4 py-2 rounded-lg transition-colors ${
               currentView === id
                 ? 'bg-[#C69249] text-white'
@@ -58,36 +57,7 @@ export function Sidebar({ currentView, onViewChange, userType }: SidebarProps) {
             <span>{label}</span>
           </button>
         ))}
-        {userType === 'driver' && (
-          <NavLink
-            to="/driver/riders"
-            className={({ isActive }) =>
-              `flex items-center space-x-3 px-4 py-2 rounded-lg transition-colors ${
-                isActive
-                  ? 'bg-[#C69249] text-white'
-                  : 'text-zinc-400 hover:bg-zinc-800 hover:text-white'
-              }`
-            }
-          >
-            <Users className="w-5 h-5" />
-            <span>Manage Riders</span>
-          </NavLink>
-        )}
-        {userType === 'driver' && (
-          <NavLink
-            to="/driver/messages"
-            className={({ isActive }) =>
-              `flex items-center space-x-3 px-4 py-2 rounded-lg transition-colors ${
-                isActive
-                  ? 'bg-[#C69249] text-white'
-                  : 'text-zinc-400 hover:bg-zinc-800 hover:text-white'
-              }`
-            }
-          >
-            <MessageCircle className="w-5 h-5" />
-            <span>Messages</span>
-          </NavLink>
-        )}
+        
         <button
           onClick={signOut}
           className="w-full flex items-center space-x-3 px-4 py-2 rounded-lg text-zinc-400 hover:bg-zinc-800 hover:text-white transition-colors mt-8"

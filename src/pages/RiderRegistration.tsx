@@ -1,112 +1,152 @@
 import React, { useState } from 'react';
+import { Form, Input, Button, Card } from 'antd';
 import { useNavigate } from 'react-router-dom';
-import { Form, Input, Button, Card, message } from 'antd';
+import { createUserWithEmailAndPassword } from 'firebase/auth';
 import { doc, setDoc } from 'firebase/firestore';
-import { db } from '../lib/firebase';
+import { auth, db } from '../lib/firebase';
+import toast from 'react-hot-toast';
 import { useAuth } from '../providers/AuthProvider';
-import { Header } from '../components/Header';
 
-interface RiderFormData {
-  name: string;
+interface RegistrationFormData {
   email: string;
-  phone: string;
+  password: string;
+  confirmPassword: string;
+  firstName: string;
+  lastName: string;
 }
 
-export default function RiderRegistration() {
-  const { user } = useAuth();
+const RiderRegistration = () => {
   const navigate = useNavigate();
+  const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
+  const { refreshRiderData } = useAuth();
 
-  const onFinish = async (values: RiderFormData) => {
-    if (!user) {
-      message.error('You must be logged in to register as a rider');
-      return;
-    }
-
+  const onFinish = async (values: RegistrationFormData) => {
     setLoading(true);
     try {
-      await setDoc(doc(db, 'riders', user.uid), {
-        id: user.uid,
-        name: values.name,
+      if (values.password !== values.confirmPassword) {
+        toast.error('Passwords do not match');
+        return;
+      }
+
+      const userCredential = await createUserWithEmailAndPassword(
+        auth,
+        values.email,
+        values.password
+      );
+
+      // Create rider profile
+      await setDoc(doc(db, 'riders', userCredential.user.uid), {
         email: values.email,
-        phone: values.phone,
+        firstName: values.firstName,
+        lastName: values.lastName,
         created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
+        membershipTier: 'basic',
+        totalRides: 0,
+        lastRideDate: null
       });
 
-      message.success('Registration successful!');
-      sessionStorage.setItem('isNewRegistration', 'true');
+      // Make sure rider data is loaded in context
+      await refreshRiderData();
+
+      toast.success('Registration successful!');
       navigate('/rider/portal');
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error registering rider:', error);
-      message.error('Failed to register. Please try again.');
+      toast.error(error.message || 'Failed to register');
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-black">
-      <Header />
-      <div className="max-w-md mx-auto p-6">
-        <Card className="bg-zinc-900 border-zinc-800">
-          <h1 className="text-2xl font-bold text-white mb-6">Rider Registration</h1>
-          <Form
-            name="rider-registration"
-            layout="vertical"
-            onFinish={onFinish}
-            autoComplete="off"
-            requiredMark={false}
+    <div className="min-h-screen bg-zinc-900 flex items-center justify-center p-4">
+      <Card 
+        className="w-full max-w-md bg-zinc-800 shadow-xl border-0"
+        title={
+          <div className="text-center">
+            <h2 className="text-2xl font-bold text-white mb-2">Rider Registration</h2>
+            <p className="text-zinc-400">Create your rider account</p>
+          </div>
+        }
+      >
+        <Form
+          form={form}
+          name="rider-registration"
+          onFinish={onFinish}
+          layout="vertical"
+          requiredMark={false}
+        >
+          <Form.Item
+            name="firstName"
+            label={<span className="text-white">First Name</span>}
+            rules={[{ required: true, message: 'Please enter your first name' }]}
           >
-            <Form.Item
-              label={<span className="text-white">Full Name</span>}
-              name="name"
-              rules={[{ required: true, message: 'Please enter your name' }]}
-            >
-              <Input 
-                className="bg-zinc-800 border-zinc-700 text-white" 
-                placeholder="Enter your full name" 
-              />
-            </Form.Item>
+            <Input className="bg-zinc-800 border-zinc-700 text-white" />
+          </Form.Item>
 
-            <Form.Item
-              label={<span className="text-white">Email</span>}
-              name="email"
-              rules={[
-                { required: true, message: 'Please enter your email' },
-                { type: 'email', message: 'Please enter a valid email' }
-              ]}
-            >
-              <Input 
-                className="bg-zinc-800 border-zinc-700 text-white" 
-                placeholder="Enter your email" 
-              />
-            </Form.Item>
+          <Form.Item
+            name="lastName"
+            label={<span className="text-white">Last Name</span>}
+            rules={[{ required: true, message: 'Please enter your last name' }]}
+          >
+            <Input className="bg-zinc-800 border-zinc-700 text-white" />
+          </Form.Item>
 
-            <Form.Item
-              label={<span className="text-white">Phone Number</span>}
-              name="phone"
-              rules={[{ required: true, message: 'Please enter your phone number' }]}
-            >
-              <Input 
-                className="bg-zinc-800 border-zinc-700 text-white" 
-                placeholder="Enter your phone number" 
-              />
-            </Form.Item>
+          <Form.Item
+            name="email"
+            label={<span className="text-white">Email</span>}
+            rules={[
+              { required: true, message: 'Please enter your email' },
+              { type: 'email', message: 'Please enter a valid email' }
+            ]}
+          >
+            <Input className="bg-zinc-800 border-zinc-700 text-white" />
+          </Form.Item>
 
-            <Form.Item>
-              <Button
-                type="primary"
-                htmlType="submit"
-                loading={loading}
-                className="w-full bg-[#C69249] hover:bg-[#B58239] border-none"
-              >
-                Register as Rider
-              </Button>
-            </Form.Item>
-          </Form>
-        </Card>
-      </div>
+          <Form.Item
+            name="password"
+            label={<span className="text-white">Password</span>}
+            rules={[
+              { required: true, message: 'Please enter your password' },
+              { min: 6, message: 'Password must be at least 6 characters' }
+            ]}
+          >
+            <Input.Password className="bg-zinc-800 border-zinc-700 text-white" />
+          </Form.Item>
+
+          <Form.Item
+            name="confirmPassword"
+            label={<span className="text-white">Confirm Password</span>}
+            rules={[
+              { required: true, message: 'Please confirm your password' },
+              ({ getFieldValue }) => ({
+                validator(_, value) {
+                  if (!value || getFieldValue('password') === value) {
+                    return Promise.resolve();
+                  }
+                  return Promise.reject(new Error('The passwords do not match'));
+                },
+              }),
+            ]}
+          >
+            <Input.Password className="bg-zinc-800 border-zinc-700 text-white" />
+          </Form.Item>
+
+          <Form.Item>
+            <Button
+              type="primary"
+              htmlType="submit"
+              className="w-full bg-[#C69249] hover:bg-[#B37F3D] border-none"
+              loading={loading}
+            >
+              Register
+            </Button>
+          </Form.Item>
+        </Form>
+      </Card>
     </div>
   );
-}
+};
+
+export default RiderRegistration;

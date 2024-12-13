@@ -64,14 +64,6 @@ function BookingPage() {
       setError('Please enter your phone number');
       return;
     }
-    if (!formData.pickup.trim()) {
-      setError('Please enter pickup location');
-      return;
-    }
-    if (!formData.dropoff.trim()) {
-      setError('Please enter drop-off location');
-      return;
-    }
 
     setError('');
     setStep('drivers');
@@ -91,14 +83,25 @@ function BookingPage() {
       await webhookService.submitRideRequest(formData);
 
       // Create ride in Firebase
-      await ridesService.createRide({
+      const rideData = {
         ...formData,
         selectedDriverId: selectedDriver.id,
-        status: 'pending'
-      });
+        status: 'pending',
+        created_at: new Date().toISOString()
+      };
+      
+      await ridesService.createRide(rideData);
 
-      // Redirect to thank you page
-      navigate('/thank-you');
+      // Redirect to confirmation page with booking details
+      navigate('/booking-confirmation', {
+        state: {
+          booking: {
+            ...formData,
+            driver: selectedDriver,
+            created_at: rideData.created_at
+          }
+        }
+      });
     } catch (error) {
       console.error('Submission error:', error);
       setError(error instanceof Error ? error.message : 'Failed to submit ride request. Please try again.');
@@ -118,10 +121,13 @@ function BookingPage() {
   };
 
   const handleDriverSelect = (driver: Driver) => {
+    if (!driver) return;
     setSelectedDriver(prev => prev?.id === driver.id ? null : driver);
+    setViewingDriver(null); // Close the modal after selection
   };
 
   const handleDriverClick = (driver: Driver) => {
+    if (!driver) return;
     setViewingDriver(driver);
   };
 
@@ -186,7 +192,7 @@ function BookingPage() {
                 />
 
                 <FormInput
-                  label="Pickup Location"
+                  label="Pickup Location (Optional)"
                   name="pickup"
                   value={formData.pickup}
                   onChange={handleChange}
@@ -194,7 +200,7 @@ function BookingPage() {
                 />
 
                 <FormInput
-                  label="Drop-off Location"
+                  label="Drop-off Location (Optional)"
                   name="dropoff"
                   value={formData.dropoff}
                   onChange={handleChange}
@@ -232,11 +238,11 @@ function BookingPage() {
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <div className="text-neutral-400 text-sm mb-1">Pickup</div>
-                    <div>{formData.pickup}</div>
+                    <div>{formData.pickup || 'Not specified'}</div>
                   </div>
                   <div>
                     <div className="text-neutral-400 text-sm mb-1">Drop-off</div>
-                    <div>{formData.dropoff}</div>
+                    <div>{formData.dropoff || 'Not specified'}</div>
                   </div>
                 </div>
               </div>

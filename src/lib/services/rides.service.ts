@@ -102,7 +102,8 @@ export const ridesService = {
       status: rideData.selectedDriverId ? 'assigned' : 'pending',
       created_at: new Date().toISOString(),
       scheduled_time: new Date().toISOString(),
-      driverId: rideData.selectedDriverId || '',
+      selectedDriverId: rideData.selectedDriverId || '',
+      driverId: rideData.selectedDriverId || '', // Set both fields for compatibility
       availableDrivers: availableDrivers.map(driver => ({
         id: driver.id,
         name: driver.name,
@@ -129,16 +130,19 @@ export const ridesService = {
   },
 
   async getRidesByDriver(driverId: string) {
+    console.log('Getting rides for driver:', driverId);
     const q = query(
       collection(db, 'rides'),
-      where('driverId', '==', driverId)
+      where('selectedDriverId', '==', driverId)
     );
 
     const querySnapshot = await getDocs(q);
-    return querySnapshot.docs.map(doc => ({
+    const rides = querySnapshot.docs.map(doc => ({
       id: doc.id,
       ...doc.data()
     }));
+    console.log('Found rides:', rides);
+    return rides;
   },
 
   async getAvailableRides() {
@@ -251,9 +255,10 @@ export const ridesService = {
   },
 
   subscribeToDriverRides(driverId: string, callback: (rides: any[]) => void) {
+    console.log('Subscribing to rides for driver:', driverId);
     const q = query(
       collection(db, 'rides'),
-      where('driverId', '==', driverId)
+      where('selectedDriverId', '==', driverId)
     );
 
     return onSnapshot(q, (snapshot) => {
@@ -261,7 +266,10 @@ export const ridesService = {
         id: doc.id,
         ...doc.data()
       }));
+      console.log('Real-time rides update:', rides);
       callback(rides);
+    }, (error) => {
+      console.error('Error subscribing to driver rides:', error);
     });
   }
 };

@@ -91,8 +91,10 @@ export function DriverDetailsModal({
           {onSelect && (
             <button
               onClick={() => {
-                onSelect();
-                onClose();
+                if (onSelect) {
+                  onSelect();
+                  onClose();
+                }
               }}
               className={`w-full mt-6 py-3 px-4 rounded-lg font-medium transition-colors ${
                 selected
@@ -100,7 +102,7 @@ export function DriverDetailsModal({
                   : 'bg-neutral-800 text-white hover:bg-neutral-700'
               }`}
             >
-              {selected ? 'Selected Driver' : 'Select Driver'}
+              {selected ? 'Deselect Driver' : 'Select Driver'}
             </button>
           )}
         </div>

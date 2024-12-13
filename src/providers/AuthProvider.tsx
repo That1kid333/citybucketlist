@@ -1,6 +1,6 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { User } from 'firebase/auth';
-import { doc, onSnapshot } from 'firebase/firestore';
+import { doc, onSnapshot, getDoc, collection } from 'firebase/firestore';
 import { auth, db } from '../lib/firebase';
 import { signInWithGoogle, signOut } from '../services/auth';
 import { Driver } from '../types/driver';
@@ -13,115 +13,236 @@ interface AuthContextType {
   loading: boolean;
   signInWithGoogle: () => Promise<void>;
   signOut: () => Promise<void>;
+  refreshDriverData: () => Promise<void>;
+  refreshRiderData: () => Promise<void>;
 }
 
-const AuthContext = createContext<AuthContextType | undefined>(undefined);
+const AuthContext = createContext<AuthContextType>({
+  user: null,
+  driver: null,
+  rider: null,
+  loading: true,
+  signInWithGoogle: async () => {},
+  signOut: async () => {},
+  refreshDriverData: async () => {},
+  refreshRiderData: async () => {},
+});
 
-export function AuthProvider({ children }: { children: React.ReactNode }) {
+export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [driver, setDriver] = useState<Driver | null>(null);
   const [rider, setRider] = useState<Rider | null>(null);
   const [loading, setLoading] = useState(true);
-  const [profilesChecked, setProfilesChecked] = useState(false);
+  const [driverLoading, setDriverLoading] = useState(false);
+  const [riderLoading, setRiderLoading] = useState(false);
 
+  // Listen for auth state changes
   useEffect(() => {
-    console.log('Setting up auth state listener');
-    const unsubscribe = auth.onAuthStateChanged(async (user) => {
-      console.log('Auth state changed. User:', user?.uid);
+    console.log('Setting up auth listener');
+    const unsubscribe = auth.onAuthStateChanged((user) => {
+      console.log('Auth state changed:', { userId: user?.uid });
       setUser(user);
-
       if (!user) {
-        console.log('No user logged in, clearing driver and rider data');
         setDriver(null);
         setRider(null);
-        setLoading(false);
-        setProfilesChecked(false);
-        return;
       }
-
-      try {
-        // Check for driver profile
-        const driverDoc = doc(db, 'drivers', user.uid);
-        const driverUnsubscribe = onSnapshot(driverDoc, (doc) => {
-          if (doc.exists()) {
-            const data = doc.data();
-            console.log('Driver profile found:', doc.id, data);
-            setDriver({ 
-              id: doc.id, 
-              ...data,
-              email: user.email || data.email,
-              name: user.displayName || data.name,
-              photoURL: user.photoURL || data.photoURL,
-              createdAt: data.created_at || data.createdAt,
-              updatedAt: data.updated_at || data.updatedAt
-            } as Driver);
-          } else {
-            console.log('No driver profile found');
-            setDriver(null);
-          }
-          setProfilesChecked(true);
-        });
-
-        // Check for rider profile
-        const riderDoc = doc(db, 'riders', user.uid);
-        const riderUnsubscribe = onSnapshot(riderDoc, (doc) => {
-          if (doc.exists()) {
-            console.log('Rider profile found:', doc.id);
-            setRider({ id: doc.id, ...doc.data() } as Rider);
-          } else {
-            console.log('No rider profile found');
-            setRider(null);
-          }
-          setProfilesChecked(true);
-        });
-
-        return () => {
-          driverUnsubscribe();
-          riderUnsubscribe();
-        };
-      } catch (error) {
-        console.error('Error fetching user data:', error);
-        setLoading(false);
-        setProfilesChecked(true);
-      }
+      setLoading(false);
     });
 
     return () => unsubscribe();
   }, []);
 
-  // Update loading state when profiles are checked
+  // Listen for rider data changes
   useEffect(() => {
-    if (profilesChecked) {
-      console.log('Profiles checked, setting loading to false');
-      setLoading(false);
-    }
-  }, [profilesChecked]);
+    let unsubscribeRider: (() => void) | undefined;
+    let unsubscribeSavedRiders: (() => void) | undefined;
 
-  const value = {
-    user,
-    driver,
-    rider,
-    loading,
-    signInWithGoogle,
-    signOut: async () => {
-      await signOut();
-      setDriver(null);
+    if (user) {
+      console.log('Setting up rider listener for user:', user.uid);
+      setRiderLoading(true);
+      const riderRef = doc(db, 'riders', user.uid);
+      
+      try {
+        // Listen for rider document changes
+        unsubscribeRider = onSnapshot(riderRef, async (doc) => {
+          console.log('Rider data changed:', { exists: doc.exists() });
+          if (doc.exists()) {
+            const data = doc.data();
+            setRider({
+              id: doc.id,
+              ...data,
+              savedRiders: [] // Initialize empty array that will be populated by subcollection
+            } as Rider);
+
+            // Set up listener for saved riders subcollection
+            const savedRidersRef = collection(db, 'riders', user.uid, 'savedRiders');
+            unsubscribeSavedRiders = onSnapshot(savedRidersRef, (snapshot) => {
+              const savedRiders = snapshot.docs.map(doc => ({
+                id: doc.id,
+                ...doc.data()
+              }));
+              
+              setRider(prevRider => {
+                if (!prevRider) return null;
+                return {
+                  ...prevRider,
+                  savedRiders
+                };
+              });
+            }, (error) => {
+              console.error('Error in saved riders listener:', error);
+              // Don't set rider to null, just log the error
+            });
+          } else {
+            setRider(null);
+          }
+          setRiderLoading(false);
+        }, (error) => {
+          console.error('Error in rider listener:', error);
+          setRider(null);
+          setRiderLoading(false);
+        });
+      } catch (error) {
+        console.error('Error in rider listener:', error);
+        setRider(null);
+        setRiderLoading(false);
+      }
+    } else {
       setRider(null);
-      setProfilesChecked(false);
+      setRiderLoading(false);
+    }
+
+    return () => {
+      if (unsubscribeRider) {
+        console.log('Cleaning up rider listener');
+        unsubscribeRider();
+      }
+      if (unsubscribeSavedRiders) {
+        console.log('Cleaning up saved riders listener');
+        unsubscribeSavedRiders();
+      }
+    };
+  }, [user]);
+
+  // Listen for driver data changes
+  useEffect(() => {
+    let unsubscribeDriver: (() => void) | undefined;
+
+    if (user) {
+      console.log('Setting up driver listener for user:', user.uid);
+      setDriverLoading(true);
+      const driverRef = doc(db, 'drivers', user.uid);
+      
+      try {
+        unsubscribeDriver = onSnapshot(driverRef, (doc) => {
+          console.log('Driver data changed:', { exists: doc.exists() });
+          if (doc.exists()) {
+            const data = doc.data();
+            setDriver({
+              id: doc.id,
+              ...data
+            } as Driver);
+          } else {
+            setDriver(null);
+          }
+          setDriverLoading(false);
+        }, (error) => {
+          console.error('Error in driver listener:', error);
+          setDriver(null);
+          setDriverLoading(false);
+        });
+      } catch (error) {
+        console.error('Error in driver listener:', error);
+        setDriver(null);
+        setDriverLoading(false);
+      }
+    } else {
+      setDriver(null);
+      setDriverLoading(false);
+    }
+
+    return () => {
+      if (unsubscribeDriver) {
+        console.log('Cleaning up driver listener');
+        unsubscribeDriver();
+      }
+    };
+  }, [user]);
+
+  const refreshDriverData = async () => {
+    if (!user) return;
+    
+    try {
+      const driverRef = doc(db, 'drivers', user.uid);
+      const driverDoc = await getDoc(driverRef);
+      
+      if (driverDoc.exists()) {
+        const data = driverDoc.data();
+        setDriver({
+          id: driverDoc.id,
+          ...data
+        } as Driver);
+      } else {
+        setDriver(null);
+      }
+    } catch (error) {
+      console.error('Error refreshing driver data:', error);
+      setDriver(null);
     }
   };
 
+  const refreshRiderData = async () => {
+    if (!user) return;
+    
+    try {
+      const riderRef = doc(db, 'riders', user.uid);
+      const riderDoc = await getDoc(riderRef);
+      
+      if (riderDoc.exists()) {
+        const data = riderDoc.data();
+        setRider({
+          id: riderDoc.id,
+          ...data
+        } as Rider);
+      } else {
+        setRider(null);
+      }
+    } catch (error) {
+      console.error('Error refreshing rider data:', error);
+      setRider(null);
+    }
+  };
+
+  const isLoading = loading || (user && (driverLoading || riderLoading));
+
+  console.log('AuthProvider state:', {
+    hasUser: !!user,
+    hasDriver: !!driver,
+    hasRider: !!rider,
+    loading: isLoading,
+    authLoading: loading,
+    driverLoading,
+    riderLoading
+  });
+
   return (
-    <AuthContext.Provider value={value}>
+    <AuthContext.Provider
+      value={{
+        user,
+        driver,
+        rider,
+        loading: isLoading,
+        signInWithGoogle,
+        signOut,
+        refreshDriverData,
+        refreshRiderData
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );
 }
 
 export function useAuth() {
-  const context = useContext(AuthContext);
-  if (context === undefined) {
-    throw new Error('useAuth must be used within an AuthProvider');
-  }
-  return context;
+  return useContext(AuthContext);
 }

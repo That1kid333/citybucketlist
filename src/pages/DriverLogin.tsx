@@ -29,14 +29,7 @@ function DriverLogin() {
         
         if (driver) {
           console.log('Driver found from redirect:', driver);
-          
-          if (!driver.vehicle || !driver.phone) {
-            console.log('Driver needs to complete registration');
-            navigate('/driver/registration');
-          } else {
-            console.log('Driver fully registered, navigating to portal');
-            navigate('/driver/portal');
-          }
+          navigate('/driver/portal');
           toast.success('Successfully signed in with Google!');
         }
       } catch (error) {
@@ -69,21 +62,30 @@ function DriverLogin() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsLoading(true);
     setError('');
+    setIsLoading(true);
 
     try {
       // Validate form data
-      loginSchema.parse(formData);
+      const validatedData = loginSchema.parse(formData);
+
+      // Attempt to log in
+      const driver = await loginDriver(validatedData.email, validatedData.password);
+      console.log('Login successful:', driver);
       
-      await loginDriver(formData.email, formData.password);
-      toast.success('Successfully logged in!');
+      // Always redirect to portal after successful login
       navigate('/driver/portal');
+      toast.success('Login successful!');
     } catch (error) {
       console.error('Login error:', error);
-      const message = error instanceof Error ? error.message : 'Failed to log in';
-      setError(message);
-      toast.error(message);
+      if (error instanceof z.ZodError) {
+        setError(error.errors[0].message);
+        toast.error(error.errors[0].message);
+      } else {
+        const message = error instanceof Error ? error.message : 'Failed to log in';
+        setError(message);
+        toast.error(message);
+      }
     } finally {
       setIsLoading(false);
     }

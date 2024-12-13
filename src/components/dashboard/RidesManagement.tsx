@@ -12,6 +12,8 @@ interface Ride {
   pickup: string;
   dropoff: string;
   scheduled_time: string;
+  selectedDriverId?: string;
+  driverId?: string;
   availableDrivers?: Array<{
     id: string;
     name: string;
@@ -27,11 +29,11 @@ interface Ride {
 }
 
 interface RidesManagementProps {
-  driverId: string;
+  driver: Driver;
   isAdmin?: boolean;
 }
 
-export function RidesManagement({ driverId, isAdmin = false }: RidesManagementProps) {
+export function RidesManagement({ driver, isAdmin = false }: RidesManagementProps) {
   const [rides, setRides] = useState<Ride[]>([]);
   const [selectedRide, setSelectedRide] = useState<Ride | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -39,7 +41,7 @@ export function RidesManagement({ driverId, isAdmin = false }: RidesManagementPr
   const [availableDrivers, setAvailableDrivers] = useState<Driver[]>([]);
 
   useEffect(() => {
-    if (!driverId) {
+    if (!driver?.id) {
       setError('Driver ID is required');
       setIsLoading(false);
       return;
@@ -51,7 +53,7 @@ export function RidesManagement({ driverId, isAdmin = false }: RidesManagementPr
     } else {
       loadDriverRides();
     }
-  }, [driverId, isAdmin]);
+  }, [driver?.id, isAdmin]);
 
   const loadAvailableRides = async () => {
     try {
@@ -69,14 +71,16 @@ export function RidesManagement({ driverId, isAdmin = false }: RidesManagementPr
   };
 
   const loadDriverRides = async () => {
-    if (!driverId) {
+    if (!driver?.id) {
       setError('Driver ID is required');
       setIsLoading(false);
       return;
     }
 
     try {
-      const unsubscribe = ridesService.subscribeToRides(driverId, (fetchedRides) => {
+      console.log('Loading rides for driver:', driver.id);
+      const unsubscribe = ridesService.subscribeToRides(driver.id, (fetchedRides) => {
+        console.log('Fetched rides:', fetchedRides);
         setRides(fetchedRides);
         setIsLoading(false);
       });

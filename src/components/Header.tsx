@@ -5,41 +5,43 @@ import { auth, db } from '../lib/firebase';
 import { signOut } from 'firebase/auth';
 import { doc, getDoc } from 'firebase/firestore';
 import { Driver } from '../types/driver';
+import { Rider } from '../types/rider';
 import { useAuth } from '../providers/AuthProvider';
 
 export function Header() {
   const navigate = useNavigate();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
-  const [driver, setDriver] = useState<Driver | null>(null);
-  const { user } = useAuth();
+  const [userProfile, setUserProfile] = useState<Driver | Rider | null>(null);
+  const { user, userType } = useAuth();
 
   useEffect(() => {
-    const fetchDriverData = async () => {
-      if (!user) {
-        setDriver(null);
+    const fetchUserData = async () => {
+      if (!user || !userType) {
+        setUserProfile(null);
         return;
       }
 
       try {
-        const driverDoc = await getDoc(doc(db, 'drivers', user.uid));
-        if (driverDoc.exists()) {
-          setDriver({ id: driverDoc.id, ...driverDoc.data() } as Driver);
+        const collection = userType === 'driver' ? 'drivers' : 'riders';
+        const userDoc = await getDoc(doc(db, collection, user.uid));
+        if (userDoc.exists()) {
+          setUserProfile({ id: userDoc.id, ...userDoc.data() } as Driver | Rider);
         }
       } catch (error) {
-        console.error('Error fetching driver data:', error);
-        setDriver(null);
+        console.error('Error fetching user data:', error);
+        setUserProfile(null);
       }
     };
 
-    fetchDriverData();
-  }, [user]);
+    fetchUserData();
+  }, [user, userType]);
 
   const handleLogout = async () => {
     try {
-      setDriver(null); // Clear driver data before signing out
+      setUserProfile(null);
       await signOut(auth);
-      setIsProfileMenuOpen(false); // Close profile menu
+      setIsProfileMenuOpen(false);
       navigate('/');
     } catch (error) {
       console.error('Logout error:', error);
@@ -50,70 +52,38 @@ export function Header() {
     <header className="bg-black py-4">
       <div className="container mx-auto px-4">
         <div className="flex justify-between items-center">
-          <Link to="/" className="flex items-center space-x-4">
-            <img 
-              src="https://aiautomationsstorage.blob.core.windows.net/cbl/citybucketlist%20logo.png"
-              alt="CityBucketList.com"
-              className="h-8 object-contain"
-            />
+          <Link to="/" className="text-white text-2xl font-bold">
+            City Bucket List
           </Link>
 
-          <button
-            onClick={() => setIsMenuOpen(!isMenuOpen)}
-            className="lg:hidden text-white hover:text-[#C69249]"
-          >
-            {isMenuOpen ? (
-              <X className="w-6 h-6" />
-            ) : (
-              <Menu className="w-6 h-6" />
-            )}
-          </button>
-          
-          <nav className="hidden lg:flex items-center space-x-6">
-            <Link to="/find-drivers" className="text-white hover:text-[#C69249]">
-              Find Drivers
-            </Link>
-            
+          {/* Desktop Navigation */}
+          <nav className="hidden md:flex items-center space-x-8">
             {user ? (
               <>
-                <Link to="/driver/portal" className="text-white hover:text-[#C69249]">
-                  Driver Portal
+                <Link to={`/${userType}/portal`} className="text-white hover:text-gray-300">
+                  Dashboard
                 </Link>
                 <div className="relative">
                   <button
                     onClick={() => setIsProfileMenuOpen(!isProfileMenuOpen)}
-                    className="flex items-center space-x-2 text-white hover:text-[#C69249]"
+                    className="flex items-center text-white hover:text-gray-300"
                   >
-                    <div className="flex items-center space-x-2">
-                      {driver?.photo ? (
-                        <img
-                          src={driver.photo}
-                          alt="Profile"
-                          className="w-8 h-8 rounded-full object-cover"
-                        />
-                      ) : (
-                        <User className="w-8 h-8 p-1 rounded-full border-2 border-[#C69249]" />
-                      )}
-                      <span>{driver?.name || 'Driver'}</span>
-                      <ChevronDown className="w-4 h-4" />
-                    </div>
+                    <User className="w-5 h-5 mr-2" />
+                    <span>{userProfile?.name || user.email}</span>
+                    <ChevronDown className="w-4 h-4 ml-1" />
                   </button>
-
                   {isProfileMenuOpen && (
-                    <div className="absolute right-0 mt-2 w-48 bg-black border border-neutral-800 rounded-lg shadow-lg py-1">
+                    <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1">
                       <Link
-                        to="/driver/portal"
-                        className="block px-4 py-2 text-white hover:bg-[#C69249] hover:text-white"
+                        to={`/${userType}/settings`}
+                        className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
                         onClick={() => setIsProfileMenuOpen(false)}
                       >
-                        Profile Settings
+                        Settings
                       </Link>
                       <button
-                        onClick={() => {
-                          handleLogout();
-                          setIsProfileMenuOpen(false);
-                        }}
-                        className="block w-full text-left px-4 py-2 text-white hover:bg-[#C69249] hover:text-white"
+                        onClick={handleLogout}
+                        className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
                       >
                         Logout
                       </button>
@@ -122,70 +92,72 @@ export function Header() {
                 </div>
               </>
             ) : (
-              <Link
-                to="/driver/login"
-                className="px-4 py-2 bg-[#C69249] text-white rounded-lg hover:bg-[#B58238] transition-colors"
-              >
-                Driver Login
-              </Link>
+              <>
+                <Link to="/driver/login" className="text-white hover:text-gray-300">
+                  Driver Login
+                </Link>
+                <Link to="/rider/login" className="text-white hover:text-gray-300">
+                  Rider Login
+                </Link>
+              </>
             )}
           </nav>
+
+          {/* Mobile Menu Button */}
+          <button
+            onClick={() => setIsMenuOpen(!isMenuOpen)}
+            className="md:hidden text-white"
+          >
+            {isMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+          </button>
         </div>
 
-        <nav
-          className={`lg:hidden ${
-            isMenuOpen ? 'flex' : 'hidden'
-          } flex-col space-y-4 mt-4 border-t border-neutral-800 pt-4`}
-        >
-          <Link
-            to="/find-drivers"
-            className="text-white hover:text-[#C69249] text-center py-2"
-            onClick={() => setIsMenuOpen(false)}
-          >
-            Find Drivers
-          </Link>
-          
-          {user ? (
-            <>
-              <div className="flex items-center justify-center space-x-2 py-2">
-                {driver?.photo ? (
-                  <img
-                    src={driver.photo}
-                    alt="Profile"
-                    className="w-8 h-8 rounded-full object-cover"
-                  />
-                ) : (
-                  <User className="w-8 h-8 p-1 rounded-full border-2 border-[#C69249]" />
-                )}
-                <span className="text-white">{driver?.name || 'Driver'}</span>
-              </div>
-              <Link
-                to="/driver/portal"
-                className="text-white hover:text-[#C69249] text-center py-2"
-                onClick={() => setIsMenuOpen(false)}
-              >
-                Driver Portal
-              </Link>
-              <button
-                onClick={() => {
-                  handleLogout();
-                  setIsMenuOpen(false);
-                }}
-                className="w-full px-4 py-2 bg-[#C69249] text-white rounded-lg hover:bg-[#B58238] transition-colors"
-              >
-                Logout
-              </button>
-            </>
-          ) : (
-            <Link
-              to="/driver/login"
-              className="w-full px-4 py-2 bg-[#C69249] text-white rounded-lg hover:bg-[#B58238] transition-colors text-center"
-              onClick={() => setIsMenuOpen(false)}
-            >
-              Driver Login
-            </Link>
-          )}
-        </nav>
+        {/* Mobile Navigation */}
+        {isMenuOpen && (
+          <nav className="mt-4 md:hidden">
+            {user ? (
+              <>
+                <Link
+                  to={`/${userType}/portal`}
+                  className="block text-white py-2"
+                  onClick={() => setIsMenuOpen(false)}
+                >
+                  Dashboard
+                </Link>
+                <Link
+                  to={`/${userType}/settings`}
+                  className="block text-white py-2"
+                  onClick={() => setIsMenuOpen(false)}
+                >
+                  Settings
+                </Link>
+                <button
+                  onClick={handleLogout}
+                  className="block w-full text-left text-white py-2"
+                >
+                  Logout
+                </button>
+              </>
+            ) : (
+              <>
+                <Link
+                  to="/driver/login"
+                  className="block text-white py-2"
+                  onClick={() => setIsMenuOpen(false)}
+                >
+                  Driver Login
+                </Link>
+                <Link
+                  to="/rider/login"
+                  className="block text-white py-2"
+                  onClick={() => setIsMenuOpen(false)}
+                >
+                  Rider Login
+                </Link>
+              </>
+            )}
+          </nav>
+        )}
       </div>
     </header>
   );

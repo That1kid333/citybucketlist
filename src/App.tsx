@@ -8,14 +8,18 @@ import RiderPortal from './pages/RiderPortal';
 import DriverLogin from './pages/DriverLogin';
 import RiderLogin from './pages/RiderLogin';
 import DriverRegistration from './pages/DriverRegistration';
+import RiderRegistration from './pages/RiderRegistration';
 import DriverSignup from './pages/DriverSignup';
 import DriverTutorialPage from './pages/DriverTutorialPage';
 import FindDrivers from './pages/FindDrivers';
 import OnboardingFlow from './pages/onboarding/OnboardingFlow';
 import { EarningsDashboard } from './pages/dashboard/EarningsDashboard';
+import BookingConfirmation from './pages/BookingConfirmation';
 import { ThankYouPage } from './pages/ThankYouPage';
 import ProtectedRoute from './components/ProtectedRoute';
 import { ManageRiders } from './pages/ManageRiders';
+import MembershipPage from './pages/MembershipPage';
+import RiderMembershipPage from './pages/RiderMembershipPage';
 
 const router = createBrowserRouter(
   [
@@ -28,6 +32,18 @@ const router = createBrowserRouter(
       element: <DriversPage />,
     },
     {
+      path: "/driver/login",
+      element: <DriverLogin />,
+    },
+    {
+      path: "/driver/register",
+      element: <DriverRegistration />,
+    },
+    {
+      path: "/driver/registration",
+      element: <DriverRegistration />,
+    },
+    {
       path: "/driver/portal",
       element: (
         <ProtectedRoute userType="driver">
@@ -36,7 +52,31 @@ const router = createBrowserRouter(
       ),
     },
     {
-      path: "/rider-portal",
+      path: "/membership",
+      element: (
+        <ProtectedRoute userType="driver">
+          <MembershipPage />
+        </ProtectedRoute>
+      ),
+    },
+    {
+      path: "/rider/membership",
+      element: (
+        <ProtectedRoute userType="rider">
+          <RiderMembershipPage />
+        </ProtectedRoute>
+      ),
+    },
+    {
+      path: "/rider/login",
+      element: <RiderLogin />,
+    },
+    {
+      path: "/rider/register",
+      element: <RiderRegistration />,
+    },
+    {
+      path: "/rider/portal",
       element: (
         <ProtectedRoute userType="rider">
           <RiderPortal />
@@ -44,19 +84,11 @@ const router = createBrowserRouter(
       ),
     },
     {
-      path: "/driver-login",
-      element: <DriverLogin />,
-    },
-    {
-      path: "/rider-login",
-      element: <RiderLogin />,
-    },
-    {
-      path: "/driver-registration",
-      element: <DriverRegistration />,
-    },
-    {
       path: "/driver-signup",
+      element: <DriverSignup />,
+    },
+    {
+      path: "/driver/signup",
       element: <DriverSignup />,
     },
     {
@@ -80,6 +112,10 @@ const router = createBrowserRouter(
       ),
     },
     {
+      path: "/booking-confirmation",
+      element: <BookingConfirmation />,
+    },
+    {
       path: "/thank-you",
       element: <ThankYouPage />,
     },
@@ -94,21 +130,18 @@ const router = createBrowserRouter(
   ],
   {
     future: {
-      v7_startTransition: true,
-      v7_relativeSplatPath: true,
-      v7_fetcherPersist: true,
-      v7_normalizeFormMethod: true,
-      v7_partialHydration: true,
-      v7_skipActionErrorRevalidation: true
+      v7_startTransition: true
     }
   }
 );
 
-export function App() {
+const App = () => {
   return (
     <AuthProvider>
       <RouterProvider router={router} />
-      <Toaster position="top-center" />
+      <Toaster position="top-right" reverseOrder={false} />
     </AuthProvider>
   );
-}
+};
+
+export default App;

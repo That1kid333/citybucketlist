@@ -1,25 +1,33 @@
-import React, { useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Button, Card } from 'antd';
-import { FcGoogle } from 'react-icons/fc';
-import { useAuth } from '../providers/AuthProvider';
+import React, { useState } from 'react';
+import { useNavigate, Link } from 'react-router-dom';
+import { Form, Input, Button, Card, message } from 'antd';
+import { signInWithEmailAndPassword } from 'firebase/auth';
+import { auth } from '../lib/firebase';
 import { Header } from '../components/Header';
+import { useAuth } from '../providers/AuthProvider';
+
+interface LoginFormData {
+  email: string;
+  password: string;
+}
 
 export default function RiderLogin() {
-  const { user, rider, signInWithGoogle } = useAuth();
   const navigate = useNavigate();
+  const [loading, setLoading] = useState(false);
+  const { refreshRiderData } = useAuth();
 
-  useEffect(() => {
-    if (user && rider) {
-      navigate('/rider/portal');
-    }
-  }, [user, rider, navigate]);
-
-  const handleGoogleSignIn = async () => {
+  const onFinish = async (values: LoginFormData) => {
+    setLoading(true);
     try {
-      await signInWithGoogle();
+      await signInWithEmailAndPassword(auth, values.email, values.password);
+      await refreshRiderData(); // Make sure rider data is loaded
+      message.success('Login successful!');
+      navigate('/rider/portal');
     } catch (error) {
-      console.error('Error signing in with Google:', error);
+      console.error('Error logging in:', error);
+      message.error('Invalid email or password');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -28,29 +36,52 @@ export default function RiderLogin() {
       <Header />
       <div className="max-w-md mx-auto p-6">
         <Card className="bg-zinc-900 border-zinc-800">
-          <div className="text-center space-y-6">
-            <h1 className="text-2xl font-bold text-white">Rider Login</h1>
-            <p className="text-zinc-400">
-              Sign in to access your rider dashboard, book rides, and manage your preferences.
-            </p>
-            
-            <Button
-              icon={<FcGoogle className="w-5 h-5" />}
-              onClick={handleGoogleSignIn}
-              className="w-full h-12 flex items-center justify-center space-x-2 bg-white hover:bg-gray-100 text-black font-medium rounded-lg"
+          <h1 className="text-2xl font-bold text-white mb-6">Rider Login</h1>
+          <Form
+            name="rider-login"
+            layout="vertical"
+            onFinish={onFinish}
+            autoComplete="off"
+            requiredMark={false}
+          >
+            <Form.Item
+              label={<span className="text-white">Email</span>}
+              name="email"
+              rules={[
+                { required: true, message: 'Please enter your email' },
+                { type: 'email', message: 'Please enter a valid email' }
+              ]}
             >
-              <span>Continue with Google</span>
-            </Button>
+              <Input className="bg-zinc-800 border-zinc-700 text-white" />
+            </Form.Item>
 
-            <div className="text-sm text-zinc-400">
-              Don't have an account?{' '}
-              <button
-                onClick={() => navigate('/rider/register')}
-                className="text-[#C69249] hover:text-[#B58239]"
+            <Form.Item
+              label={<span className="text-white">Password</span>}
+              name="password"
+              rules={[{ required: true, message: 'Please enter your password' }]}
+            >
+              <Input.Password className="bg-zinc-800 border-zinc-700 text-white" />
+            </Form.Item>
+
+            <Form.Item>
+              <Button
+                type="primary"
+                htmlType="submit"
+                className="w-full bg-[#C69249] hover:bg-[#B37F3D] border-none"
+                loading={loading}
               >
+                Log In
+              </Button>
+            </Form.Item>
+          </Form>
+
+          <div className="text-center mt-4">
+            <p className="text-zinc-400">
+              Don't have an account?{' '}
+              <Link to="/rider/register" className="text-[#C69249] hover:text-[#B37F3D]">
                 Register here
-              </button>
-            </div>
+              </Link>
+            </p>
           </div>
         </Card>
       </div>
