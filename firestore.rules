@@ -1,59 +1,115 @@
 rules_version = '2';
+
 service cloud.firestore {
   match /databases/{database}/documents {
     // Helper functions
-    function isAuthenticated() {
+    function isSignedIn() {
       return request.auth != null;
     }
     
-    function isUserDoc(userId) {
-      return request.auth.uid == userId;
+    function isAdmin() {
+      return isSignedIn() && 
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid));
     }
     
-    function isDriver(driverId) {
-      return isAuthenticated() && request.auth.uid == driverId;
+    function isDriver() {
+      return isSignedIn() && 
+        exists(/databases/$(database)/documents/drivers/$(request.auth.uid));
     }
     
-    function isRideParticipant(rideData) {
-      return isAuthenticated() && (
-        request.auth.uid == rideData.driverId || 
-        request.auth.uid == rideData.riderId
+    function isRider() {
+      return isSignedIn() && 
+        exists(/databases/$(database)/documents/riders/$(request.auth.uid));
+    }
+
+    // Admin collection
+    match /admins/{adminId} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+
+    // Drivers collection
+    match /drivers/{driverId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn();
+      allow update, delete: if isSignedIn() && (
+        isAdmin() || 
+        request.auth.uid == driverId
       );
     }
 
-    function isOwner(userId) {
-      return isAuthenticated() && request.auth.uid == userId;
+    // Riders collection
+    match /riders/{riderId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn();
+      allow update, delete: if isSignedIn() && (
+        isAdmin() || 
+        request.auth.uid == riderId
+      );
+
+      // Allow access to subcollections
+      match /savedRiders/{savedRiderId} {
+        allow read: if isSignedIn() && (
+          isAdmin() ||
+          request.auth.uid == riderId ||
+          request.auth.uid == savedRiderId
+        );
+        allow write: if isSignedIn() && request.auth.uid == riderId;
+      }
     }
 
-    function hasValidFields(requiredFields) {
-      return request.resource.data.keys().hasAll(requiredFields);
+    // SavedRiders collection
+    match /savedRiders/{savedRiderId} {
+      allow read: if isSignedIn() && (
+        isAdmin() ||
+        resource.data.driverId == request.auth.uid
+      );
+      allow create: if isSignedIn() && (
+        isAdmin() ||
+        request.resource.data.driverId == request.auth.uid
+      );
+      allow update, delete: if isSignedIn() && (
+        isAdmin() ||
+        resource.data.driverId == request.auth.uid
+      );
+    }
+
+    // Rides collection
+    match /rides/{rideId} {
+      allow read: if isSignedIn() && (
+        isAdmin() || 
+        isDriver() || 
+        resource.data.riderId == request.auth.uid
+      );
+      allow create: if isSignedIn() && isRider();
+      allow update: if isSignedIn() && (
+        isAdmin() || 
+        isDriver() || 
+        resource.data.riderId == request.auth.uid
+      );
+      allow delete: if isSignedIn() && isAdmin();
+    }
+
+    // Ride Transfers collection
+    match /rideTransfers/{transferId} {
+      allow read: if isSignedIn() && (
+        isAdmin() || 
+        resource.data.originalDriverId == request.auth.uid ||
+        resource.data.newDriverId == request.auth.uid
+      );
+      allow create: if isSignedIn() && isDriver() && 
+        request.resource.data.originalDriverId == request.auth.uid;
+      allow update: if isSignedIn() && (
+        isAdmin() || 
+        resource.data.originalDriverId == request.auth.uid ||
+        resource.data.newDriverId == request.auth.uid
+      );
     }
 
     // Users collection rules
     match /users/{userId} {
-      allow read: if isAuthenticated();
-      allow write: if isUserDoc(userId);
-    }
-
-    // Drivers collection rules
-    match /drivers/{driverId} {
-      allow read: if isAuthenticated();
-      allow create: if isAuthenticated() && isOwner(driverId);
-      allow update: if isOwner(driverId);
-      allow delete: if false;
-
-      // Saved riders subcollection
-      match /savedRiders/{riderId} {
-        allow read, write: if isDriver(driverId);
-      }
-    }
-
-    // Riders collection rules
-    match /riders/{riderId} {
-      allow read: if isAuthenticated();
-      allow create: if isAuthenticated() && isOwner(riderId);
-      allow update: if isOwner(riderId);
-      allow delete: if false;
+      allow read: if isSignedIn();
+      allow write: if isSignedIn() && request.auth.uid == userId;
     }
 
     // Scheduled rides collection rules
@@ -92,12 +148,25 @@ service cloud.firestore {
       allow delete: if isParticipant() && resource.data.status == 'cancelled';
     }
 
-    // Rides collection rules
-    match /rides/{rideId} {
-      allow read: if isAuthenticated();
-      allow create: if isAuthenticated();
-      allow update: if isAuthenticated() && isRideParticipant(resource.data);
-      allow delete: if false;
+    // Messages collection
+    match /messages/{messageId} {
+      allow read: if isSignedIn() && (
+        isAdmin() || 
+        resource.data.senderId == request.auth.uid || 
+        resource.data.receiverId == request.auth.uid
+      );
+      allow create: if isSignedIn() && (
+        request.resource.data.senderId == request.auth.uid
+      );
+      allow update: if isSignedIn() && (
+        isAdmin() || 
+        resource.data.senderId == request.auth.uid || 
+        resource.data.receiverId == request.auth.uid
+      );
+      allow delete: if isSignedIn() && (
+        isAdmin() || 
+        resource.data.senderId == request.auth.uid
+      );
     }
 
     // Locations collection rules
@@ -106,37 +175,26 @@ service cloud.firestore {
       allow write: if false; // Admin-only writes
     }
 
-    // Messages collection rules
-    match /messages/{messageId} {
-      allow read: if isAuthenticated() && (
-        resource.data.senderId == request.auth.uid || 
-        resource.data.recipientId == request.auth.uid
-      );
-      allow create: if isAuthenticated() && 
-        request.resource.data.senderId == request.auth.uid;
-      allow update, delete: if false; // Messages cannot be modified or deleted
-    }
-
     // Chats collection rules
     match /chats/{chatId} {
-      allow read: if isAuthenticated() && (
+      allow read: if isSignedIn() && (
         resource.data.driverId == request.auth.uid || 
         resource.data.riderId == request.auth.uid
       );
-      allow create: if isAuthenticated();
-      allow update: if isAuthenticated() && (
+      allow create: if isSignedIn();
+      allow update: if isSignedIn() && (
         resource.data.driverId == request.auth.uid || 
         resource.data.riderId == request.auth.uid
       );
-      allow delete: if false;
+      allow delete: if isSignedIn() && isAdmin();
 
       // Messages in chat
       match /messages/{messageId} {
-        allow read: if isAuthenticated() && (
+        allow read: if isSignedIn() && (
           get(/databases/$(database)/documents/chats/$(chatId)).data.driverId == request.auth.uid ||
           get(/databases/$(database)/documents/chats/$(chatId)).data.riderId == request.auth.uid
         );
-        allow create: if isAuthenticated() && (
+        allow create: if isSignedIn() && (
           get(/databases/$(database)/documents/chats/$(chatId)).data.driverId == request.auth.uid ||
           get(/databases/$(database)/documents/chats/$(chatId)).data.riderId == request.auth.uid
         );
@@ -145,8 +203,8 @@ service cloud.firestore {
 
     // Time slots collection rules
     match /timeSlots/{slotId} {
-      allow read: if isAuthenticated();
-      allow write: if isAuthenticated();
+      allow read: if isSignedIn();
+      allow write: if isSignedIn();
     }
   }
 }
