@@ -10,7 +10,8 @@ import {
   Star,
   Users,
   Crown,
-  Car
+  Car,
+  X
 } from 'lucide-react';
 
 interface SidebarItem {
@@ -51,9 +52,11 @@ const riderItems: SidebarItem[] = [
 
 interface Props {
   userType?: 'driver' | 'rider';
+  isOpen: boolean;
+  onClose: () => void;
 }
 
-export function Sidebar({ userType: propUserType }: Props) {
+export function Sidebar({ userType: propUserType, isOpen, onClose }: Props) {
   const location = useLocation();
   const { driver, rider } = useAuth();
   
@@ -69,43 +72,67 @@ export function Sidebar({ userType: propUserType }: Props) {
   const items = userType === 'driver' ? driverItems : riderItems;
 
   return (
-    <div className="w-64 bg-zinc-900 h-screen fixed left-0 top-0 overflow-y-auto">
-      <div className="p-4">
-        <Link to="/">
-          <img 
-            src="https://aiautomationsstorage.blob.core.windows.net/cbl/citybucketlist%20logo.png"
-            alt="CityBucketList.com"
-            className="h-8 object-contain mb-8"
-          />
-        </Link>
-        
-        <nav className="space-y-2">
-          {items.map((item) => {
-            const isActive = location.pathname === item.to;
-            return (
-              <Link
-                key={item.to}
-                to={item.to}
-                className={`
-                  flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors
-                  ${isActive 
-                    ? 'bg-[#C69249] text-white' 
-                    : 'text-zinc-400 hover:bg-zinc-800 hover:text-white'
-                  }
-                `}
-              >
-                {item.icon}
-                <span>{item.label}</span>
-                {item.premium && (
-                  <span className="ml-auto text-xs font-medium px-2 py-1 rounded-full bg-[#C69249] text-white">
-                    Premium
-                  </span>
-                )}
-              </Link>
-            );
-          })}
-        </nav>
+    <>
+      {/* Overlay */}
+      {isOpen && (
+        <div 
+          className="fixed inset-0 bg-black bg-opacity-50 z-40 md:hidden"
+          onClick={onClose}
+        />
+      )}
+      
+      {/* Sidebar */}
+      <div className={`
+        fixed top-0 left-0 h-screen bg-zinc-900 w-64 z-50 transform transition-transform duration-300 ease-in-out
+        ${isOpen ? 'translate-x-0' : '-translate-x-full'}
+        md:translate-x-0 md:static md:z-auto
+      `}>
+        <div className="p-4">
+          <div className="flex justify-between items-center mb-8">
+            <Link to="/" onClick={() => onClose()}>
+              <img 
+                src="https://aiautomationsstorage.blob.core.windows.net/cbl/citybucketlist%20logo.png"
+                alt="CityBucketList.com"
+                className="h-8 object-contain"
+              />
+            </Link>
+            <button 
+              onClick={onClose}
+              className="md:hidden text-zinc-400 hover:text-white"
+            >
+              <X className="h-6 w-6" />
+            </button>
+          </div>
+          
+          <nav className="space-y-2">
+            {items.map((item) => {
+              const isActive = location.pathname === item.to;
+              return (
+                <Link
+                  key={item.to}
+                  to={item.to}
+                  onClick={() => onClose()}
+                  className={`
+                    flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors
+                    ${isActive 
+                      ? 'bg-[#C69249] text-white' 
+                      : 'text-zinc-400 hover:bg-zinc-800 hover:text-white'
+                    }
+                  `}
+                >
+                  {item.icon}
+                  <span>{item.label}</span>
+                  {item.premium && (
+                    <span className="ml-auto text-xs font-medium px-2 py-1 rounded-full bg-[#C69249] text-white">
+                      Premium
+                    </span>
+                  )}
+                </Link>
+              );
+            })}
+          </nav>
+        </div>
       </div>
-    </div>
+    </>
   );
 }
