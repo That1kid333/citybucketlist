@@ -16,7 +16,7 @@ interface SavedRider {
   createdAt: string;
 }
 
-export function SavedRiders() {
+export default function SavedRiders() {
   const [riders, setRiders] = useState<SavedRider[]>([]);
   const [showAddRider, setShowAddRider] = useState(false);
   const [isLoading, setIsLoading] = useState(true);

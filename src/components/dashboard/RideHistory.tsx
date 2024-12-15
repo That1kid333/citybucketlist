@@ -1,9 +1,9 @@
 import React, { useEffect, useState } from 'react';
-import { Card, Table, Tag, Button } from 'antd';
-import { collection, query, where, orderBy, getDocs } from 'firebase/firestore';
+import { collection, query, where, orderBy, getDocs, doc, updateDoc } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
 import { useAuth } from '../../providers/AuthProvider';
-import { MapPin, Clock, DollarSign } from 'lucide-react';
+import { MapPin, Clock, DollarSign, CheckCircle, ChevronRight } from 'lucide-react';
+import { toast } from 'react-hot-toast';
 
 interface Ride {
   id: string;
@@ -19,48 +19,137 @@ export default function RideHistory() {
   const { user } = useAuth();
   const [rides, setRides] = useState<Ride[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
 
   useEffect(() => {
-    const fetchRides = async () => {
-      if (!user) return;
+    const handleResize = () => setIsMobile(window.innerWidth <= 768);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
-      try {
-        const ridesRef = collection(db, 'rides');
-        const q = query(
-          ridesRef,
-          where('riderId', '==', user.uid),
-          orderBy('date', 'desc')
-        );
-        
-        const querySnapshot = await getDocs(q);
-        const rideData: Ride[] = [];
-        
-        querySnapshot.forEach((doc) => {
-          const data = doc.data();
-          rideData.push({
-            id: doc.id,
-            pickupLocation: data.pickupLocation,
-            dropoffLocation: data.dropoffLocation,
-            date: data.date ? new Date(data.date.toDate()).toLocaleString() : 'N/A',
-            status: data.status || 'Unknown',
-            driverName: data.driverName || 'Not assigned',
-            price: data.price || 0,
-          });
+  const fetchRides = async () => {
+    if (!user) return;
+
+    try {
+      const ridesRef = collection(db, 'rides');
+      const q = query(
+        ridesRef,
+        where('riderId', '==', user.uid),
+        orderBy('date', 'desc')
+      );
+      
+      const querySnapshot = await getDocs(q);
+      const rideData: Ride[] = [];
+      
+      querySnapshot.forEach((doc) => {
+        const data = doc.data();
+        rideData.push({
+          id: doc.id,
+          pickupLocation: data.pickupLocation,
+          dropoffLocation: data.dropoffLocation,
+          date: data.date ? new Date(data.date.toDate()).toLocaleString() : 'N/A',
+          status: data.status || 'pending',
+          driverName: data.driverName || 'Not assigned',
+          price: data.price || 0,
         });
-        
-        setRides(rideData);
-      } catch (error) {
-        console.error('Error fetching rides:', error);
-        if (error instanceof Error) {
-          console.log('Full error details:', error.message);
-        }
-      } finally {
-        setLoading(false);
-      }
-    };
+      });
+      
+      setRides(rideData);
+    } catch (error) {
+      console.error('Error fetching rides:', error);
+      toast.error('Failed to load ride history');
+    } finally {
+      setLoading(false);
+    }
+  };
 
+  useEffect(() => {
     fetchRides();
   }, [user]);
+
+  const handleCompleteRide = async (rideId: string) => {
+    try {
+      const rideRef = doc(db, 'rides', rideId);
+      await updateDoc(rideRef, {
+        status: 'completed',
+        completedAt: new Date()
+      });
+      
+      toast.success('Ride marked as completed');
+      fetchRides(); // Refresh the list
+    } catch (error) {
+      console.error('Error completing ride:', error);
+      toast.error('Failed to complete ride');
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-48">
+        <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-[#C69249]" />
+      </div>
+    );
+  }
+
+  if (isMobile) {
+    return (
+      <div className="p-4">
+        <h2 className="text-xl font-semibold text-white mb-4">Ride History</h2>
+        {rides.length === 0 ? (
+          <div className="text-center text-zinc-400 py-8">
+            No rides found
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {rides.map((ride) => (
+              <div
+                key={ride.id}
+                className="bg-zinc-900 rounded-lg p-4 space-y-3"
+              >
+                <div className="flex items-start justify-between">
+                  <div className="space-y-2">
+                    <div className="flex items-center text-zinc-400">
+                      <MapPin className="w-4 h-4 mr-2 text-[#C69249]" />
+                      <span className="text-sm">Pickup: {ride.pickupLocation}</span>
+                    </div>
+                    <div className="flex items-center text-zinc-400">
+                      <MapPin className="w-4 h-4 mr-2 text-[#C69249]" />
+                      <span className="text-sm">Dropoff: {ride.dropoffLocation}</span>
+                    </div>
+                    <div className="flex items-center text-zinc-400">
+                      <Clock className="w-4 h-4 mr-2 text-[#C69249]" />
+                      <span className="text-sm">{ride.date}</span>
+                    </div>
+                    <div className="flex items-center text-zinc-400">
+                      <DollarSign className="w-4 h-4 mr-2 text-[#C69249]" />
+                      <span className="text-sm">${ride.price.toFixed(2)}</span>
+                    </div>
+                  </div>
+                  <div className="flex flex-col items-end">
+                    <span className={`text-sm px-2 py-1 rounded-full ${
+                      ride.status === 'completed' ? 'bg-green-500/20 text-green-400' :
+                      ride.status === 'pending' ? 'bg-yellow-500/20 text-yellow-400' :
+                      'bg-blue-500/20 text-blue-400'
+                    }`}>
+                      {ride.status}
+                    </span>
+                    {ride.status === 'in_progress' && (
+                      <button
+                        onClick={() => handleCompleteRide(ride.id)}
+                        className="mt-2 text-sm text-[#C69249] hover:text-[#B58239] transition-colors"
+                      >
+                        Complete Ride
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  }
 
   const columns = [
     {

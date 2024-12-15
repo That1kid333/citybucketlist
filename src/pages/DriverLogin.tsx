@@ -73,16 +73,22 @@ function DriverLogin() {
       const driver = await loginDriver(validatedData.email, validatedData.password);
       console.log('Login successful:', driver);
       
-      // Always redirect to portal after successful login
       navigate('/driver/portal');
       toast.success('Login successful!');
     } catch (error) {
       console.error('Login error:', error);
       if (error instanceof z.ZodError) {
-        setError(error.errors[0].message);
-        toast.error(error.errors[0].message);
+        const message = error.errors[0].message;
+        setError(message);
+        toast.error(message);
       } else {
-        const message = error instanceof Error ? error.message : 'Failed to log in';
+        const message = error instanceof Error 
+          ? error.message.includes('auth/user-not-found')
+            ? 'No account found with this email. Please register first.'
+            : error.message.includes('auth/wrong-password')
+              ? 'Incorrect password. Please try again.'
+              : error.message
+          : 'Failed to log in';
         setError(message);
         toast.error(message);
       }

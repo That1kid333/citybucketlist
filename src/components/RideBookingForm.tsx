@@ -1,12 +1,14 @@
 import React from 'react';
 import { Form, Input, DatePicker, Button, InputNumber } from 'antd';
-import { addDoc, collection, Timestamp, getDoc, doc } from 'firebase/firestore';
+import { addDoc, collection, serverTimestamp, getDoc, doc } from 'firebase/firestore';
 import { db, auth } from '../lib/firebase';
 import toast from 'react-hot-toast';
 import { MapPin, Calendar, Users, FileText, User, Phone } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 const RideBookingForm = () => {
   const [form] = Form.useForm();
+  const navigate = useNavigate();
 
   const onFinish = async (values: any) => {
     try {
@@ -34,7 +36,6 @@ const RideBookingForm = () => {
         passengers: values.passengers || 1,
         notes: values.notes || '',
         status: 'pending',
-        created_at: Timestamp.now(),
       };
 
       // Validate required fields
@@ -48,7 +49,26 @@ const RideBookingForm = () => {
         return;
       }
 
-      await addDoc(collection(db, 'rides'), rideData);
+      const rideDoc = await addDoc(collection(db, 'rides'), {
+        ...rideData,
+        created_at: serverTimestamp()
+      });
+      
+      if (auth.currentUser) {
+        // For logged-in users, redirect to the ride request confirmation with driver messaging
+        navigate('/ride-request-confirmation', {
+          state: {
+            rideId: rideDoc.id,
+            driverId: rideData.driverId || null,
+            driverName: rideData.driverName || 'Your driver'
+          },
+          replace: true
+        });
+      } else {
+        // For guest users, redirect to the guest confirmation page
+        navigate('/ride-confirmation', { replace: true });
+      }
+      
       toast.success('Ride booked successfully!');
       form.resetFields();
     } catch (error) {

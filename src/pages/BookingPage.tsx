@@ -79,26 +79,53 @@ function BookingPage() {
     setError('');
     
     try {
+      // Log form data for debugging
+      console.log('Form data:', formData);
+
       // Send to webhook
       await webhookService.submitRideRequest(formData);
 
       // Create ride in Firebase
       const rideData = {
-        ...formData,
-        selectedDriverId: selectedDriver.id,
-        status: 'pending',
-        created_at: new Date().toISOString()
+        name: formData.name?.trim() || '',
+        phone: formData.phone?.trim() || '',
+        pickup: formData.pickup?.trim() || '',
+        dropoff: formData.dropoff?.trim() || '',
+        locationId: formData.locationId,
+        selectedDriverId: selectedDriver?.id || '',
+        isGuestBooking: true // Mark as guest booking
       };
+
+      // Log ride data for debugging
+      console.log('Ride data to be submitted:', rideData);
+
+      // Validate required fields
+      if (!rideData.name) {
+        setError('Please enter your name');
+        return;
+      }
+      if (!rideData.phone) {
+        setError('Please enter your phone number');
+        return;
+      }
+      if (!rideData.locationId) {
+        setError('Please select a location');
+        return;
+      }
       
       await ridesService.createRide(rideData);
 
-      // Redirect to confirmation page with booking details
-      navigate('/booking-confirmation', {
+      // Redirect to thank you page with booking details
+      navigate('/thank-you', {
         state: {
           booking: {
-            ...formData,
+            customerName: formData.name,
+            phone: formData.phone,
+            pickup: formData.pickup,
+            dropoff: formData.dropoff,
+            locationId: formData.locationId,
             driver: selectedDriver,
-            created_at: rideData.created_at
+            created_at: new Date().toISOString()
           }
         }
       });

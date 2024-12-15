@@ -89,44 +89,66 @@ export const ridesService = {
     dropoff?: string;
     locationId: string;
     selectedDriverId?: string;
+    isGuestBooking?: boolean;
   }) {
-    // First, find available drivers
-    const availableDrivers = await this.getAvailableDriversByLocation(rideData.locationId);
-    
-    const rideDoc = {
-      customerName: rideData.name,
-      phone: rideData.phone,
-      pickup: rideData.pickup || '',
-      dropoff: rideData.dropoff || '',
-      locationId: rideData.locationId,
-      status: rideData.selectedDriverId ? 'assigned' : 'pending',
-      created_at: new Date().toISOString(),
-      scheduled_time: new Date().toISOString(),
-      selectedDriverId: rideData.selectedDriverId || '',
-      driverId: rideData.selectedDriverId || '', // Set both fields for compatibility
-      availableDrivers: availableDrivers.map(driver => ({
-        id: driver.id,
-        name: driver.name,
-        photo: driver.photoURL || '',
-        rating: driver.rating || 5.0
-      })),
-      assignedDriver: rideData.selectedDriverId ? {
-        id: rideData.selectedDriverId,
-        assignedAt: new Date().toISOString()
-      } : null
-    };
+    try {
+      console.log('Creating ride with data:', rideData);
+      
+      // First, find available drivers
+      const availableDrivers = await this.getAvailableDriversByLocation(rideData.locationId);
+      
+      const rideDoc = {
+        customerName: rideData.name,
+        phone: rideData.phone,
+        pickup: rideData.pickup || '',
+        dropoff: rideData.dropoff || '',
+        locationId: rideData.locationId,
+        status: rideData.selectedDriverId ? 'assigned' : 'pending',
+        created_at: new Date().toISOString(),
+        scheduled_time: new Date().toISOString(),
+        selectedDriverId: rideData.selectedDriverId || '',
+        driverId: rideData.selectedDriverId || '', // Set both fields for compatibility
+        isGuestBooking: true,
+        availableDrivers: availableDrivers.map(driver => ({
+          id: driver.id,
+          name: driver.name,
+          photo: driver.photoURL || '',
+          rating: driver.rating || 5.0
+        }))
+      };
 
-    const ride = await addDoc(collection(db, 'rides'), rideDoc);
+      console.log('Transformed ride doc:', rideDoc);
 
-    // If a driver was selected, assign them immediately
-    if (rideData.selectedDriverId) {
-      const selectedDriver = availableDrivers.find(d => d.id === rideData.selectedDriverId);
-      if (selectedDriver) {
-        await this.assignDriver(ride.id, selectedDriver.id);
+      try {
+        // Try to create the document
+        const ridesCollection = collection(db, 'rides');
+        console.log('Got rides collection reference');
+        
+        const ride = await addDoc(ridesCollection, rideDoc);
+        console.log('Created ride with ID:', ride.id);
+
+        return { 
+          id: ride.id,
+          rideDetails: {
+            pickupLocation: rideDoc.pickup,
+            dropoffLocation: rideDoc.dropoff,
+            customerName: rideDoc.customerName,
+            phone: rideDoc.phone
+          }
+        };
+      } catch (writeError) {
+        console.error('Error writing to Firestore:', writeError);
+        console.log('Firestore write error details:', {
+          code: writeError.code,
+          message: writeError.message,
+          details: writeError.details
+        });
+        throw writeError;
       }
+    } catch (error) {
+      console.error('Error creating ride:', error);
+      throw error;
     }
-
-    return { id: ride.id };
   },
 
   async getRidesByDriver(driverId: string) {
@@ -197,6 +219,48 @@ export const ridesService = {
       status,
       updated_at: new Date().toISOString()
     });
+  },
+
+  async transferRide(rideId: string, fromDriverId: string, toDriverId: string) {
+    try {
+      const rideRef = doc(db, 'rides', rideId);
+      const rideDoc = await getDoc(rideRef);
+      
+      if (!rideDoc.exists()) {
+        throw new Error('Ride not found');
+      }
+
+      const ride = rideDoc.data();
+      if (ride.driverId !== fromDriverId) {
+        throw new Error('Unauthorized to transfer this ride');
+      }
+
+      // Get the target driver
+      const toDriverRef = doc(db, 'drivers', toDriverId);
+      const toDriverDoc = await getDoc(toDriverRef);
+      
+      if (!toDriverDoc.exists()) {
+        throw new Error('Target driver not found');
+      }
+
+      const toDriver = toDriverDoc.data();
+      if (!toDriver.available || !toDriver.isActive) {
+        throw new Error('Target driver is not available');
+      }
+
+      // Update the ride with new driver
+      await updateDoc(rideRef, {
+        driverId: toDriverId,
+        previousDriverId: fromDriverId,
+        transferredAt: new Date().toISOString(),
+        status: 'transferred'
+      });
+
+      return true;
+    } catch (error) {
+      console.error('Error transferring ride:', error);
+      throw error;
+    }
   },
 
   subscribeToRides(driverId: string, callback: (rides: any[]) => void) {

@@ -35,25 +35,35 @@ const RiderRegistration = () => {
         values.password
       );
 
-      // Create rider profile
-      await setDoc(doc(db, 'riders', userCredential.user.uid), {
+      // Create rider profile with full name
+      const riderData = {
         email: values.email,
         firstName: values.firstName,
         lastName: values.lastName,
+        fullName: `${values.firstName} ${values.lastName}`,
         created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
         membershipTier: 'basic',
         totalRides: 0,
-        lastRideDate: null
-      });
+        lastRideDate: null,
+        type: 'rider' as const
+      };
 
-      // Make sure rider data is loaded in context
+      await setDoc(doc(db, 'riders', userCredential.user.uid), riderData);
+
+      // Wait for rider data to be loaded in context
+      await new Promise(resolve => setTimeout(resolve, 1000));
       await refreshRiderData();
 
       toast.success('Registration successful!');
-      navigate('/rider/portal');
+      navigate('/rider/portal/overview');
     } catch (error: any) {
       console.error('Error registering rider:', error);
-      toast.error(error.message || 'Failed to register');
+      if (error.code === 'auth/email-already-in-use') {
+        toast.error('Email is already registered');
+      } else {
+        toast.error(error.message || 'Failed to register');
+      }
     } finally {
       setLoading(false);
     }

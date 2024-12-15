@@ -7,7 +7,7 @@ import { toast } from 'react-hot-toast';
 interface AccountSettingsProps {
   user: Driver | Rider;
   userType: 'driver' | 'rider';
-  onUpdate: (updates: Partial<Driver | Rider>) => void;
+  onUpdate: (updates: Partial<Driver | Rider>) => Promise<boolean>;
 }
 
 export function AccountSettings({ user, userType, onUpdate }: AccountSettingsProps) {
@@ -35,10 +35,40 @@ export function AccountSettings({ user, userType, onUpdate }: AccountSettingsPro
     }
   }, [user]);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    onUpdate(formData);
-    setIsEditing(false);
+    
+    // Validate required fields
+    if (!formData.name?.trim()) {
+      toast.error('Name is required');
+      return;
+    }
+    if (!formData.email?.trim()) {
+      toast.error('Email is required');
+      return;
+    }
+    if (!formData.phone?.trim()) {
+      toast.error('Phone number is required');
+      return;
+    }
+
+    try {
+      const success = await onUpdate({
+        name: formData.name.trim(),
+        email: formData.email.trim(),
+        phone: formData.phone.trim(),
+        locationId: formData.locationId,
+        photoURL: formData.photoURL
+      });
+
+      if (success) {
+        setIsEditing(false);
+        toast.success('Profile updated successfully');
+      }
+    } catch (error) {
+      console.error('Error updating profile:', error);
+      toast.error(error instanceof Error ? error.message : 'Failed to update profile');
+    }
   };
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -63,9 +93,15 @@ export function AccountSettings({ user, userType, onUpdate }: AccountSettingsPro
 
     try {
       const url = await uploadToCloudinary(file);
-      setFormData(prev => ({ ...prev, photoURL: url }));
-      onUpdate({ photoURL: url });
-      toast.success('Profile picture updated successfully', { id: toastId });
+      if (url) {
+        setFormData(prev => ({ ...prev, photoURL: url }));
+        const success = await onUpdate({ photoURL: url });
+        if (success) {
+          toast.success('Profile picture updated successfully', { id: toastId });
+        } else {
+          throw new Error('Failed to update profile picture');
+        }
+      }
     } catch (error) {
       console.error('Error uploading image:', error);
       toast.error('Failed to upload image', { id: toastId });
@@ -75,12 +111,12 @@ export function AccountSettings({ user, userType, onUpdate }: AccountSettingsPro
   };
 
   return (
-    <div className="bg-neutral-900 rounded-lg p-6">
-      <div className="flex justify-between items-center mb-6">
+    <div className="bg-neutral-900 rounded-lg p-4 sm:p-6">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
         <h2 className="text-xl font-semibold text-white">Account Settings</h2>
         <button
           onClick={() => setIsEditing(!isEditing)}
-          className="px-4 py-2 rounded-lg bg-[#C69249] text-white hover:bg-[#B58239] transition-colors"
+          className="w-full sm:w-auto px-4 py-2 rounded-lg bg-[#C69249] text-white hover:bg-[#B58239] transition-colors"
         >
           {isEditing ? 'Cancel' : 'Edit'}
         </button>
@@ -88,9 +124,9 @@ export function AccountSettings({ user, userType, onUpdate }: AccountSettingsPro
 
       <form onSubmit={handleSubmit} className="space-y-6">
         {/* Profile Picture */}
-        <div className="flex items-center space-x-4">
+        <div className="flex flex-col sm:flex-row items-center gap-4">
           <div className="relative">
-            <div className="w-20 h-20 rounded-full overflow-hidden bg-neutral-800">
+            <div className="w-24 h-24 sm:w-20 sm:h-20 rounded-full overflow-hidden bg-neutral-800">
               {formData.photoURL ? (
                 <img
                   src={formData.photoURL}
@@ -107,9 +143,9 @@ export function AccountSettings({ user, userType, onUpdate }: AccountSettingsPro
               type="button"
               onClick={() => fileInputRef.current?.click()}
               disabled={!isEditing || isUploading}
-              className="absolute bottom-0 right-0 p-1.5 rounded-full bg-[#C69249] text-white hover:bg-[#B58239] disabled:opacity-50 disabled:cursor-not-allowed"
+              className="absolute bottom-0 right-0 p-2 sm:p-1.5 rounded-full bg-[#C69249] text-white hover:bg-[#B58239] disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              <Camera className="w-4 h-4" />
+              <Camera className="w-5 h-5 sm:w-4 sm:h-4" />
             </button>
             <input
               ref={fileInputRef}
@@ -120,7 +156,7 @@ export function AccountSettings({ user, userType, onUpdate }: AccountSettingsPro
               disabled={!isEditing || isUploading}
             />
           </div>
-          <div>
+          <div className="text-center sm:text-left">
             <h3 className="text-lg font-medium text-white">{formData.name}</h3>
             <p className="text-sm text-neutral-400 capitalize">{userType}</p>
           </div>
@@ -133,35 +169,33 @@ export function AccountSettings({ user, userType, onUpdate }: AccountSettingsPro
               Full Name
             </label>
             <div className="relative">
-              <User className="absolute left-3 top-1/2 transform -translate-y-1/2 text-neutral-400 w-5 h-5" />
+              <User className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-neutral-500" />
               <input
                 type="text"
-                name="name"
                 value={formData.name}
-                onChange={(e) =>
-                  setFormData((prev) => ({ ...prev, name: e.target.value }))
-                }
+                onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+                className="w-full bg-neutral-800 pl-10 pr-3 py-2 rounded-lg text-white placeholder-neutral-500 focus:outline-none focus:ring-2 focus:ring-[#C69249]"
+                placeholder="Enter your full name"
                 disabled={!isEditing}
-                className="w-full pl-10 pr-4 py-2 bg-neutral-800 border border-neutral-700 rounded-lg text-white placeholder-neutral-400 focus:outline-none focus:border-[#C69249] disabled:opacity-50 disabled:cursor-not-allowed"
+                required
               />
             </div>
           </div>
 
           <div>
             <label className="block text-sm font-medium text-neutral-400 mb-1">
-              Email
+              Email Address
             </label>
             <div className="relative">
-              <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-neutral-400 w-5 h-5" />
+              <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-neutral-500" />
               <input
                 type="email"
-                name="email"
                 value={formData.email}
-                onChange={(e) =>
-                  setFormData((prev) => ({ ...prev, email: e.target.value }))
-                }
+                onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
+                className="w-full bg-neutral-800 pl-10 pr-3 py-2 rounded-lg text-white placeholder-neutral-500 focus:outline-none focus:ring-2 focus:ring-[#C69249]"
+                placeholder="Enter your email"
                 disabled={!isEditing}
-                className="w-full pl-10 pr-4 py-2 bg-neutral-800 border border-neutral-700 rounded-lg text-white placeholder-neutral-400 focus:outline-none focus:border-[#C69249] disabled:opacity-50 disabled:cursor-not-allowed"
+                required
               />
             </div>
           </div>
@@ -171,48 +205,44 @@ export function AccountSettings({ user, userType, onUpdate }: AccountSettingsPro
               Phone Number
             </label>
             <div className="relative">
-              <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 text-neutral-400 w-5 h-5" />
+              <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-neutral-500" />
               <input
                 type="tel"
-                name="phone"
                 value={formData.phone}
-                onChange={(e) =>
-                  setFormData((prev) => ({ ...prev, phone: e.target.value }))
-                }
+                onChange={(e) => setFormData(prev => ({ ...prev, phone: e.target.value }))}
+                className="w-full bg-neutral-800 pl-10 pr-3 py-2 rounded-lg text-white placeholder-neutral-500 focus:outline-none focus:ring-2 focus:ring-[#C69249]"
+                placeholder="Enter your phone number"
                 disabled={!isEditing}
-                className="w-full pl-10 pr-4 py-2 bg-neutral-800 border border-neutral-700 rounded-lg text-white placeholder-neutral-400 focus:outline-none focus:border-[#C69249] disabled:opacity-50 disabled:cursor-not-allowed"
-              />
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-neutral-400 mb-1">
-              Location ID
-            </label>
-            <div className="relative">
-              <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 text-neutral-400 w-5 h-5" />
-              <input
-                type="text"
-                name="locationId"
-                value={formData.locationId}
-                onChange={(e) =>
-                  setFormData((prev) => ({ ...prev, locationId: e.target.value }))
-                }
-                disabled={!isEditing}
-                className="w-full pl-10 pr-4 py-2 bg-neutral-800 border border-neutral-700 rounded-lg text-white placeholder-neutral-400 focus:outline-none focus:border-[#C69249] disabled:opacity-50 disabled:cursor-not-allowed"
+                required
               />
             </div>
           </div>
         </div>
 
-        {/* Save Button */}
         {isEditing && (
-          <button
-            type="submit"
-            className="w-full py-2 px-4 bg-[#C69249] text-white rounded-lg hover:bg-[#B58239] transition-colors"
-          >
-            Save Changes
-          </button>
+          <div className="flex flex-col sm:flex-row gap-3 pt-4">
+            <button
+              type="submit"
+              className="w-full sm:w-auto px-6 py-2 bg-[#C69249] text-white rounded-lg hover:bg-[#B58239] transition-colors"
+            >
+              Save Changes
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setIsEditing(false);
+                setFormData({
+                  name: user.name || '',
+                  email: user.email || '',
+                  phone: user.phone || '',
+                  photoURL: user.photoURL || ''
+                });
+              }}
+              className="w-full sm:w-auto px-6 py-2 bg-neutral-800 text-white rounded-lg hover:bg-neutral-700 transition-colors"
+            >
+              Cancel
+            </button>
+          </div>
         )}
       </form>
     </div>

@@ -1,9 +1,8 @@
 import React, { useEffect, useState } from 'react';
-import { Card, Statistic, Row, Col } from 'antd';
+import { Car, Calendar, Clock } from 'lucide-react';
 import { collection, query, where, getDocs } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { Rider } from '../types/rider';
-import { Car, Calendar, Clock } from 'lucide-react';
 
 interface RiderOverviewProps {
   rider: Rider;
@@ -57,54 +56,39 @@ const RiderOverview: React.FC<RiderOverviewProps> = ({ rider }) => {
   };
 
   return (
-    <div className="p-6">
+    <div className="p-4">
       <h2 className="text-2xl font-bold text-white mb-6">Rider Overview</h2>
-      <Card className="bg-zinc-900 border-zinc-800">
-        <Row gutter={[24, 24]}>
-          <Col xs={24} sm={8}>
-            <Card className="bg-zinc-800 border-zinc-700">
-              <Statistic 
-                title={
-                  <div className="flex items-center text-zinc-400">
-                    <Car className="w-4 h-4 mr-2 text-[#C69249]" />
-                    <span>Completed Rides</span>
-                  </div>
-                }
-                value={completedRides}
-                valueStyle={{ color: '#fff' }}
-              />
-            </Card>
-          </Col>
-          <Col xs={24} sm={8}>
-            <Card className="bg-zinc-800 border-zinc-700">
-              <Statistic 
-                title={
-                  <div className="flex items-center text-zinc-400">
-                    <Calendar className="w-4 h-4 mr-2 text-[#C69249]" />
-                    <span>Member Since</span>
-                  </div>
-                }
-                value={formatDate(rider.createdAt)}
-                valueStyle={{ color: '#fff' }}
-              />
-            </Card>
-          </Col>
-          <Col xs={24} sm={8}>
-            <Card className="bg-zinc-800 border-zinc-700">
-              <Statistic 
-                title={
-                  <div className="flex items-center text-zinc-400">
-                    <Clock className="w-4 h-4 mr-2 text-[#C69249]" />
-                    <span>Last Ride</span>
-                  </div>
-                }
-                value={formatDate(lastRideDate)}
-                valueStyle={{ color: '#fff' }}
-              />
-            </Card>
-          </Col>
-        </Row>
-      </Card>
+      <div className="space-y-4">
+        <div className="bg-zinc-900 rounded-lg p-4">
+          <div className="flex items-center text-zinc-400 mb-2">
+            <Car className="w-4 h-4 mr-2 text-[#C69249]" />
+            <span>Completed Rides</span>
+          </div>
+          <div className="text-2xl font-semibold text-white">
+            {completedRides}
+          </div>
+        </div>
+
+        <div className="bg-zinc-900 rounded-lg p-4">
+          <div className="flex items-center text-zinc-400 mb-2">
+            <Calendar className="w-4 h-4 mr-2 text-[#C69249]" />
+            <span>Member Since</span>
+          </div>
+          <div className="text-2xl font-semibold text-white">
+            {formatDate(rider.createdAt)}
+          </div>
+        </div>
+
+        <div className="bg-zinc-900 rounded-lg p-4">
+          <div className="flex items-center text-zinc-400 mb-2">
+            <Clock className="w-4 h-4 mr-2 text-[#C69249]" />
+            <span>Last Ride</span>
+          </div>
+          <div className="text-2xl font-semibold text-white">
+            {formatDate(lastRideDate)}
+          </div>
+        </div>
+      </div>
     </div>
   );
 };

@@ -96,10 +96,32 @@ export async function handleRedirectResult(): Promise<Driver | null> {
       return driverDoc.data() as Driver;
     }
 
-    console.log('No driver profile found');
-    return null;
+    // Create a new driver profile if one doesn't exist
+    console.log('Creating new driver profile for Google user');
+    const newDriverData: Driver = {
+      id: result.user.uid,
+      email: result.user.email!,
+      name: result.user.displayName || '',
+      phone: '',
+      locationId: '',
+      isActive: true,
+      available: false,
+      vehicle: {
+        make: '',
+        model: '',
+        year: '',
+        color: '',
+        plate: ''
+      },
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    };
+
+    await setDoc(doc(db, 'drivers', result.user.uid), newDriverData);
+    console.log('New driver profile created successfully');
+    return newDriverData;
   } catch (error) {
-    console.error('Error handling redirect result:', error);
+    console.error('Error handling redirect:', error);
     throw error;
   }
 }
@@ -144,7 +166,14 @@ export async function handleAuthCallback(code: string): Promise<{
 }
 
 export async function signOut(): Promise<void> {
-  console.log('Signing out user');
-  await firebaseSignOut(auth);
-  console.log('User signed out successfully');
+  try {
+    await firebaseSignOut(auth);
+    // Clear any local storage or state if needed
+    localStorage.removeItem('user');
+    localStorage.removeItem('userType');
+    window.location.href = '/'; // Force redirect to home page
+  } catch (error) {
+    console.error('Error signing out:', error);
+    throw error;
+  }
 }

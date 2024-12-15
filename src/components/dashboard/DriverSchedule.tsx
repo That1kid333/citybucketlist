@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Calendar, Clock, Plus, X } from 'lucide-react';
+import { Calendar, Clock, Plus, X, MapPin, FileText, User } from 'lucide-react';
 import { format } from 'date-fns';
 import { useAuth } from '../../providers/AuthProvider';
 import { db } from '../../lib/firebase';
@@ -189,12 +189,12 @@ export function DriverSchedule() {
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h2 className="text-xl font-semibold">Scheduled Rides</h2>
+    <div className="space-y-6 px-4 sm:px-0">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <h2 className="text-xl sm:text-2xl font-bold text-[#C69249]">Schedule</h2>
         <button
           onClick={() => setShowAddRide(true)}
-          className="flex items-center gap-2 px-4 py-2 bg-[#C69249] text-white rounded-lg hover:bg-[#B58239] transition-colors"
+          className="w-full sm:w-auto flex items-center justify-center gap-2 px-4 py-2 bg-[#C69249] text-white rounded-lg hover:bg-[#B58239] transition-colors"
         >
           <Plus className="w-4 h-4" />
           Schedule New Ride
@@ -206,7 +206,7 @@ export function DriverSchedule() {
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#C69249]" />
         </div>
       ) : scheduledRides.length === 0 ? (
-        <div className="bg-zinc-900 rounded-lg p-8 text-center">
+        <div className="bg-zinc-900 rounded-lg p-6 sm:p-8 text-center">
           <Calendar className="w-12 h-12 text-zinc-700 mx-auto mb-4" />
           <h3 className="text-lg font-medium mb-2">No Scheduled Rides</h3>
           <p className="text-zinc-400">
@@ -218,149 +218,175 @@ export function DriverSchedule() {
           {scheduledRides.map((ride) => (
             <div
               key={ride.id}
-              className="bg-zinc-900 rounded-lg p-6 space-y-4"
+              className="bg-zinc-900 rounded-lg p-4 sm:p-6 space-y-4"
             >
-              <div className="flex justify-between items-start">
-                <div className="space-y-1">
-                  <div className="text-lg font-medium">{ride.riderName}</div>
-                  <div className="flex items-center gap-2">
-                    <Calendar className="w-4 h-4 text-[#C69249]" />
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2 text-[#C69249]">
+                    <Calendar className="w-4 h-4" />
                     <span>{format(new Date(ride.date), 'MMMM d, yyyy')}</span>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <Clock className="w-4 h-4 text-[#C69249]" />
+                  <div className="flex items-center gap-2 text-zinc-400">
+                    <Clock className="w-4 h-4" />
                     <span>{ride.time}</span>
                   </div>
                 </div>
-                <span className={`px-3 py-1 rounded-full text-sm ${getStatusColor(ride.status)}`}>
-                  {ride.status.charAt(0).toUpperCase() + ride.status.slice(1)}
-                </span>
+                <div className="flex flex-col sm:flex-row gap-2">
+                  <button
+                    onClick={() => handleUpdateStatus(ride.id, 'confirmed')}
+                    className="px-4 py-2 bg-green-500/10 text-green-500 rounded-lg hover:bg-green-500/20 transition-colors text-sm"
+                  >
+                    Confirm
+                  </button>
+                  <button
+                    onClick={() => handleCancelRide(ride.id)}
+                    className="px-4 py-2 bg-red-500/10 text-red-500 rounded-lg hover:bg-red-500/20 transition-colors text-sm"
+                  >
+                    Cancel
+                  </button>
+                </div>
               </div>
 
-              <div className="space-y-2">
-                <div>
-                  <div className="text-sm text-zinc-400">Pickup Location</div>
-                  <div>{ride.pickup}</div>
+              <div className="space-y-3">
+                <div className="flex items-start gap-3">
+                  <div className="w-4 h-4 mt-1">
+                    <MapPin className="w-4 h-4 text-green-500" />
+                  </div>
+                  <div>
+                    <p className="text-sm text-zinc-400">Pickup</p>
+                    <p className="text-white">{ride.pickup}</p>
+                  </div>
                 </div>
-                <div>
-                  <div className="text-sm text-zinc-400">Drop-off Location</div>
-                  <div>{ride.dropoff}</div>
+                <div className="flex items-start gap-3">
+                  <div className="w-4 h-4 mt-1">
+                    <MapPin className="w-4 h-4 text-red-500" />
+                  </div>
+                  <div>
+                    <p className="text-sm text-zinc-400">Dropoff</p>
+                    <p className="text-white">{ride.dropoff}</p>
+                  </div>
                 </div>
                 {ride.notes && (
-                  <div>
-                    <div className="text-sm text-zinc-400">Notes</div>
-                    <div className="text-sm">{ride.notes}</div>
+                  <div className="flex items-start gap-3">
+                    <div className="w-4 h-4 mt-1">
+                      <FileText className="w-4 h-4 text-zinc-400" />
+                    </div>
+                    <div>
+                      <p className="text-sm text-zinc-400">Notes</p>
+                      <p className="text-white">{ride.notes}</p>
+                    </div>
                   </div>
                 )}
               </div>
 
-              {ride.status === 'pending' && (
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => handleUpdateStatus(ride.id, 'confirmed')}
-                    className="text-green-500 hover:text-green-400 text-sm"
-                  >
-                    Confirm Ride
-                  </button>
-                  <button
-                    onClick={() => handleCancelRide(ride.id)}
-                    className="text-red-500 hover:text-red-400 text-sm"
-                  >
-                    Cancel Ride
-                  </button>
+              <div className="pt-3 border-t border-zinc-800">
+                <div className="flex items-center gap-2">
+                  <User className="w-4 h-4 text-[#C69249]" />
+                  <span className="text-white">{ride.riderName}</span>
                 </div>
-              )}
-              {ride.status === 'confirmed' && (
-                <button
-                  onClick={() => handleUpdateStatus(ride.id, 'completed')}
-                  className="text-blue-500 hover:text-blue-400 text-sm"
-                >
-                  Mark as Completed
-                </button>
-              )}
+              </div>
             </div>
           ))}
         </div>
       )}
 
-      <Modal
-        title="Schedule a Ride"
-        open={showAddRide}
-        onOk={handleAddRide}
-        onCancel={() => setShowAddRide(false)}
-        okText="Schedule"
-        cancelText="Cancel"
-        okButtonProps={{
-          className: 'bg-[#C69249] hover:bg-[#B58239] border-none',
-        }}
-      >
-        <div className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium mb-1">Rider</label>
-            <Select
-              className="w-full"
-              placeholder="Select a rider"
-              value={newRide.riderId}
-              onChange={(value) => setNewRide(prev => ({ ...prev, riderId: value }))}
-            >
-              {savedRiders.map(rider => (
-                <Select.Option key={rider.id} value={rider.id}>
-                  {rider.name}
-                </Select.Option>
-              ))}
-            </Select>
-          </div>
+      {showAddRide && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+          <div className="bg-zinc-900 rounded-lg w-full max-w-lg">
+            <div className="p-6 border-b border-zinc-800">
+              <h3 className="text-lg font-semibold text-white">Schedule New Ride</h3>
+            </div>
 
-          <div>
-            <label className="block text-sm font-medium mb-1">Date</label>
-            <DatePicker
-              className="w-full"
-              onChange={(date: Dayjs | null) => 
-                setNewRide(prev => ({ ...prev, date: date?.toISOString() || '' }))
-              }
-            />
-          </div>
+            <div className="p-6 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-zinc-400 mb-1">Rider</label>
+                <select
+                  value={newRide.riderId}
+                  onChange={(e) => setNewRide({ ...newRide, riderId: e.target.value })}
+                  className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-[#C69249]"
+                >
+                  <option value="">Select a rider</option>
+                  {savedRiders.map((rider) => (
+                    <option key={rider.id} value={rider.id}>
+                      {rider.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
 
-          <div>
-            <label className="block text-sm font-medium mb-1">Time</label>
-            <TimePicker
-              className="w-full"
-              format="HH:mm"
-              onChange={(time: Dayjs | null) => 
-                setNewRide(prev => ({ ...prev, time: time?.format('HH:mm') || '' }))
-              }
-            />
-          </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-zinc-400 mb-1">Date</label>
+                  <input
+                    type="date"
+                    value={newRide.date}
+                    onChange={(e) => setNewRide({ ...newRide, date: e.target.value })}
+                    min={new Date().toISOString().split('T')[0]}
+                    className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-[#C69249]"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-zinc-400 mb-1">Time</label>
+                  <input
+                    type="time"
+                    value={newRide.time}
+                    onChange={(e) => setNewRide({ ...newRide, time: e.target.value })}
+                    className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-[#C69249]"
+                  />
+                </div>
+              </div>
 
-          <div>
-            <label className="block text-sm font-medium mb-1">Pickup Location</label>
-            <Input
-              value={newRide.pickup}
-              onChange={e => setNewRide(prev => ({ ...prev, pickup: e.target.value }))}
-              placeholder="Enter pickup address"
-            />
-          </div>
+              <div>
+                <label className="block text-sm font-medium text-zinc-400 mb-1">Pickup Location</label>
+                <input
+                  type="text"
+                  value={newRide.pickup}
+                  onChange={(e) => setNewRide({ ...newRide, pickup: e.target.value })}
+                  placeholder="Enter pickup address"
+                  className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-[#C69249]"
+                />
+              </div>
 
-          <div>
-            <label className="block text-sm font-medium mb-1">Drop-off Location</label>
-            <Input
-              value={newRide.dropoff}
-              onChange={e => setNewRide(prev => ({ ...prev, dropoff: e.target.value }))}
-              placeholder="Enter drop-off address"
-            />
-          </div>
+              <div>
+                <label className="block text-sm font-medium text-zinc-400 mb-1">Dropoff Location</label>
+                <input
+                  type="text"
+                  value={newRide.dropoff}
+                  onChange={(e) => setNewRide({ ...newRide, dropoff: e.target.value })}
+                  placeholder="Enter dropoff address"
+                  className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-[#C69249]"
+                />
+              </div>
 
-          <div>
-            <label className="block text-sm font-medium mb-1">Notes (Optional)</label>
-            <Input.TextArea
-              value={newRide.notes}
-              onChange={e => setNewRide(prev => ({ ...prev, notes: e.target.value }))}
-              placeholder="Add any special instructions or notes"
-              rows={3}
-            />
+              <div>
+                <label className="block text-sm font-medium text-zinc-400 mb-1">Notes (Optional)</label>
+                <textarea
+                  value={newRide.notes}
+                  onChange={(e) => setNewRide({ ...newRide, notes: e.target.value })}
+                  placeholder="Add any special instructions"
+                  rows={3}
+                  className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-[#C69249]"
+                />
+              </div>
+            </div>
+
+            <div className="p-6 border-t border-zinc-800 flex flex-col sm:flex-row gap-3 sm:justify-end">
+              <button
+                onClick={() => setShowAddRide(false)}
+                className="w-full sm:w-auto px-4 py-2 bg-zinc-800 text-white rounded-lg hover:bg-zinc-700 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleAddRide}
+                className="w-full sm:w-auto px-4 py-2 bg-[#C69249] text-white rounded-lg hover:bg-[#B58239] transition-colors"
+              >
+                Schedule Ride
+              </button>
+            </div>
           </div>
         </div>
-      </Modal>
+      )}
     </div>
   );
 }

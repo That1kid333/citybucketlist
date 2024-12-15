@@ -1,86 +1,217 @@
 import React, { useState, useEffect } from 'react';
-import { doc, updateDoc } from 'firebase/firestore';
-import { db } from '../lib/firebase';
+import { useLocation, useNavigate } from 'react-router-dom';
+import Overview from '../components/dashboard/Overview';
+import RidesManagement from '../components/dashboard/RidesManagement';
+import ScheduleManager from '../components/dashboard/ScheduleManager';
+import CommunicationHub from '../components/dashboard/CommunicationHub';
+import Settings from '../components/dashboard/Settings';
+import DriverInformation from '../components/dashboard/DriverInformation';
+import { MobileNavigation } from '../components/mobile/MobileNavigation';
 import { useAuth } from '../providers/AuthProvider';
-import { Header } from '../components/Header';
-import { Sidebar } from '../components/dashboard/Sidebar';
-import { Overview } from '../components/dashboard/Overview';
-import { RidesManagement } from '../components/dashboard/RidesManagement';
-import { ScheduleManager } from '../components/dashboard/ScheduleManager';
-import { CommunicationHub } from '../components/dashboard/CommunicationHub';
-import { SavedRiders } from '../components/dashboard/SavedRiders';
-import { Settings } from '../components/dashboard/Settings';
-import { RidersManagement } from '../components/dashboard/RidersManagement';
-import DriverRegistration from './DriverRegistration';
 import { Driver } from '../types/driver';
-
-type DashboardView = 'overview' | 'rides' | 'schedule' | 'messages' | 'manage-riders' | 'settings';
+import { doc, getDoc, collection, query, where, getDocs, updateDoc } from 'firebase/firestore';
+import { db } from '../lib/firebase';
+import toast from 'react-hot-toast';
 
 export default function DriverPortal() {
-  const { user, driver: authDriver } = useAuth();
-  const [currentView, setCurrentView] = useState<DashboardView>('overview');
+  const location = useLocation();
+  const navigate = useNavigate();
+  const { user, signOut } = useAuth();
   const [driver, setDriver] = useState<Driver | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
   const [isOnline, setIsOnline] = useState(false);
+  const [availableDrivers, setAvailableDrivers] = useState<Driver[]>([]);
+  const [selectedRide, setSelectedRide] = useState<string | null>(null);
+  const [showTransferModal, setShowTransferModal] = useState(false);
 
   useEffect(() => {
-    if (authDriver) {
-      setDriver(authDriver);
-      setIsOnline(authDriver.available || false);
-    }
-  }, [authDriver]);
+    const fetchDriverData = async () => {
+      if (!user?.uid) {
+        navigate('/driver/login');
+        return;
+      }
 
-  const handleToggleOnline = async (status: boolean) => {
-    if (!driver?.id) return;
+      try {
+        setIsLoading(true);
+        const driverRef = doc(db, 'drivers', user.uid);
+        const driverSnap = await getDoc(driverRef);
+        
+        if (driverSnap.exists()) {
+          const driverData = { 
+            id: driverSnap.id, 
+            ...driverSnap.data() 
+          } as Driver;
+          setDriver(driverData);
+          setIsOnline(driverData.available || false);
+        } else {
+          toast.error('Driver profile not found');
+          navigate('/driver/login');
+        }
+      } catch (error) {
+        console.error('Error fetching driver data:', error);
+        toast.error('Failed to load driver profile');
+      } finally {
+        setIsLoading(false);
+      }
+    };
 
+    fetchDriverData();
+  }, [user, navigate]);
+
+  useEffect(() => {
+    fetchAvailableDrivers();
+  }, []);
+
+  const fetchAvailableDrivers = async () => {
     try {
-      await updateDoc(doc(db, 'drivers', driver.id), {
-        available: status,
-        updated_at: new Date().toISOString()
+      const driversRef = collection(db, 'drivers');
+      const q = query(
+        driversRef,
+        where('isAvailable', '==', true),
+        where('id', '!=', user?.uid)
+      );
+      
+      const querySnapshot = await getDocs(q);
+      const drivers: Driver[] = [];
+      
+      querySnapshot.forEach((doc) => {
+        drivers.push({ id: doc.id, ...doc.data() } as Driver);
       });
-
-      setIsOnline(status);
-      setDriver(prev => prev ? {
-        ...prev,
-        available: status
-      } : null);
+      
+      setAvailableDrivers(drivers);
     } catch (error) {
-      console.error('Error updating availability:', error);
+      console.error('Error fetching available drivers:', error);
     }
   };
 
-  // Loading state is handled by ProtectedRoute
-  if (!user || !driver) {
+  const handleToggleOnline = (status: boolean) => {
+    setIsOnline(status);
+  };
+
+  const handleSignOut = async () => {
+    try {
+      await signOut();
+      toast.success('Signed out successfully');
+      navigate('/', { replace: true });
+    } catch (error) {
+      console.error('Error signing out:', error);
+      toast.error('Failed to sign out');
+    }
+  };
+
+  const handleTransferRide = async (driverId: string) => {
+    if (!selectedRide) return;
+
+    try {
+      const rideRef = doc(db, 'rides', selectedRide);
+      await updateDoc(rideRef, {
+        driverId: driverId,
+        status: 'transferred',
+        transferredAt: new Date().toISOString(),
+      });
+
+      setShowTransferModal(false);
+      setSelectedRide(null);
+      // Refresh the rides list
+      window.location.reload();
+    } catch (error) {
+      console.error('Error transferring ride:', error);
+    }
+  };
+
+  // Render loading state
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+      </div>
+    );
+  }
+
+  // Render error state if no driver data
+  if (!driver) {
     return null;
   }
 
-  const renderContent = () => {
-    switch (currentView) {
-      case 'overview':
-        return <Overview driver={driver} isOnline={isOnline} onToggleOnline={handleToggleOnline} />;
-      case 'rides':
-        return <RidesManagement driver={driver} />;
-      case 'schedule':
-        return <ScheduleManager driver={driver} />;
-      case 'messages':
-        return <CommunicationHub driver={driver} />;
-      case 'manage-riders':
-        return <SavedRiders />;
-      case 'settings':
-        return <Settings user={driver} userType="driver" />;
-      default:
-        return <Overview driver={driver} isOnline={isOnline} onToggleOnline={handleToggleOnline} />;
-    }
-  };
-
   return (
-    <div className="flex h-screen bg-neutral-950">
-      <Sidebar currentView={currentView} onViewChange={setCurrentView} userType="driver" />
-      <div className="flex-1 flex flex-col overflow-hidden">
-        <Header user={user} />
-        <main className="flex-1 overflow-y-auto p-6">
-          {renderContent()}
-        </main>
-      </div>
+    <div className="min-h-screen bg-black text-white">
+      <MobileNavigation
+        userType="driver"
+        currentView={location.pathname.split('/').pop() || 'overview'}
+        userName={driver?.name}
+        userPhoto={driver?.photoURL}
+        notificationCount={0}
+        onSignOut={handleSignOut}
+      >
+        <div className="p-4">
+          {location.pathname.endsWith('/settings') || location.pathname.includes('/portal/settings') ? (
+            <>
+              <DriverInformation driver={driver} />
+              <div className="mt-6">
+                <Settings user={driver} userType="driver" />
+              </div>
+            </>
+          ) : location.pathname.includes('/schedule') ? (
+            <ScheduleManager driver={driver} />
+          ) : location.pathname.includes('/messages') ? (
+            <CommunicationHub driver={driver} />
+          ) : location.pathname.includes('/rides') ? (
+            <RidesManagement 
+              driver={driver}
+              onTransferRide={(rideId) => {
+                setSelectedRide(rideId);
+                setShowTransferModal(true);
+              }}
+            />
+          ) : (
+            <Overview driver={driver} />
+          )}
+        </div>
+      </MobileNavigation>
+
+      {showTransferModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+          <div className="bg-zinc-900 rounded-lg w-full max-w-lg">
+            <div className="p-6 border-b border-zinc-800">
+              <h3 className="text-lg font-semibold text-white">Transfer Ride</h3>
+            </div>
+
+            <div className="p-6 space-y-4">
+              {availableDrivers.length === 0 ? (
+                <p className="text-zinc-400">No available drivers found.</p>
+              ) : (
+                <div className="space-y-3">
+                  {availableDrivers.map((driver) => (
+                    <button
+                      key={driver.id}
+                      onClick={() => handleTransferRide(driver.id)}
+                      className="w-full flex items-center justify-between p-4 bg-zinc-800 rounded-lg hover:bg-zinc-700 transition-colors"
+                    >
+                      <div>
+                        <p className="font-medium">{driver.name}</p>
+                        <p className="text-sm text-zinc-400">{driver.phone}</p>
+                      </div>
+                      <span className="text-[#C69249]">Select</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div className="p-6 border-t border-zinc-800 flex justify-end">
+              <button
+                onClick={() => {
+                  setShowTransferModal(false);
+                  setSelectedRide(null);
+                }}
+                className="px-4 py-2 bg-zinc-800 text-white rounded-lg hover:bg-zinc-700 transition-colors"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

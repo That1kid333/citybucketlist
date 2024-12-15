@@ -20,42 +20,41 @@ export const vehicleSchema = z.object({
 
 export interface Driver {
   id: string;
-  firstName: string;
-  lastName: string;
+  name: string;
   email: string;
-  phoneNumber: string;
-  location: string;
-  isOnline: boolean;
+  phone: string;
+  photoURL?: string;
+  locationId?: string;
+  available?: boolean;
   rating?: number;
   totalRides?: number;
-  completedRides?: number;
+  joinDate?: string;
+  tagNumber?: string;
   vehicle?: {
     make: string;
     model: string;
     year: number;
     color: string;
-    licensePlate: string;
   };
-  createdAt: Date;
-  updatedAt: Date;
+  updated_at?: string;
+  created_at?: string;
 }
 
 export const initialDriver: Partial<Driver> = {
   id: "",
-  firstName: "",
-  lastName: "",
+  name: "",
   email: "",
-  phoneNumber: "",
-  location: "",
-  isOnline: false,
+  phone: "",
+  photoURL: "",
+  locationId: "",
+  available: false,
   rating: 5.0,
   vehicle: {
     make: "",
     model: "",
     year: 0,
-    color: "",
-    licensePlate: ""
+    color: ""
   },
-  createdAt: new Date(),
-  updatedAt: new Date()
+  updated_at: "",
+  created_at: ""
 };

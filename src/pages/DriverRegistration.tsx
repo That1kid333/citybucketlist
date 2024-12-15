@@ -1,57 +1,18 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { doc, setDoc } from 'firebase/firestore';
-import { db } from '../lib/firebase';
 import { useAuth } from '../providers/AuthProvider';
-import { toast } from 'react-hot-toast';
-import { FormInput } from '../components/FormInput';
-import { vehicleMakes, vehicleColors, getModelsByMake } from '../data/vehicles';
-import { uploadToCloudinary } from '../lib/utils/cloudinaryUpload';
-import { locations } from '../types/location';
+import { doc, setDoc, getDoc } from 'firebase/firestore';
+import { db } from '../lib/firebase';
+import toast from 'react-hot-toast';
 
-interface RegistrationForm {
-  phone: string;
-  vehicle: {
-    make: string;
-    model: string;
-    year: string;
-    color: string;
-    plate: string;
-  };
-  locationId: string;
-  username: string;
-  photo: File | null;
+interface DriverRegistrationProps {
+  mode?: 'create' | 'edit';
 }
 
-interface Driver {
-  id: string;
-  name: string;
-  email: string;
-  phone: string;
-  photoURL: string;
-  vehicle: {
-    make: string;
-    model: string;
-    year: string;
-    color: string;
-    plate: string;
-  };
-  locationId: string;
-  available: boolean;
-  isActive: boolean;
-  rating: number;
-  created_at: string;
-  updated_at: string;
-}
-
-export default function DriverRegistration() {
-  const navigate = useNavigate();
+export default function DriverRegistration({ mode = 'create' }: DriverRegistrationProps) {
   const { user, driver, loading, refreshDriverData } = useAuth();
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [availableModels, setAvailableModels] = useState<string[]>([]);
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
-
-  const initialState: RegistrationForm = {
+  const navigate = useNavigate();
+  const [formData, setFormData] = useState({
     phone: '',
     vehicle: {
       make: '',
@@ -63,23 +24,33 @@ export default function DriverRegistration() {
     locationId: '',
     username: '',
     photo: null
-  };
-
-  const [formData, setFormData] = useState<RegistrationForm>(initialState);
+  });
+  const [availableModels, setAvailableModels] = useState<string[]>([]);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
-    // Only redirect if we've confirmed auth state and driver exists
-    if (!loading && driver) {
-      navigate('/driver/portal', { replace: true });
+    if (mode === 'edit' && driver) {
+      setFormData({
+        phone: driver.phone || '',
+        vehicle: {
+          make: driver.vehicle.make || '',
+          model: driver.vehicle.model || '',
+          year: driver.vehicle.year || '',
+          color: driver.vehicle.color || '',
+          plate: driver.vehicle.plate || ''
+        },
+        locationId: driver.locationId || '',
+        username: driver.username || '',
+        photo: null
+      });
     }
-  }, [loading, driver, navigate]);
+  }, [mode, driver]);
 
   useEffect(() => {
-    // Update available models when make changes
     if (formData.vehicle.make) {
       const models = getModelsByMake(formData.vehicle.make);
       setAvailableModels(models);
-      // Reset model if current selection is not valid for new make
       if (!models.includes(formData.vehicle.model)) {
         setFormData(prev => ({
           ...prev,
@@ -91,24 +62,58 @@ export default function DriverRegistration() {
     }
   }, [formData.vehicle.make]);
 
-  // Show loading spinner while auth state is being determined
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-black flex items-center justify-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-[#C69249]" />
-      </div>
-    );
-  }
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!user) return;
 
-  // Don't show the form if not logged in
-  if (!user) {
-    return null;
-  }
+    setIsSubmitting(true);
 
-  // Don't show the form if already a driver
-  if (driver) {
-    return null;
-  }
+    try {
+      let photoURL = '';
+      if (selectedFile) {
+        photoURL = await uploadToCloudinary(selectedFile);
+      }
+
+      const driverData = {
+        id: user.uid,
+        name: user.displayName || '',
+        email: user.email || '',
+        phone: formData.phone || '',
+        photoURL: photoURL,
+        vehicle: {
+          make: formData.vehicle.make || '',
+          model: formData.vehicle.model || '',
+          year: formData.vehicle.year || '',
+          color: formData.vehicle.color || '',
+          plate: formData.vehicle.plate || ''
+        },
+        locationId: formData.locationId || '',
+        available: false,
+        isActive: true,
+        rating: 5.0,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      };
+
+      const driverRef = doc(db, 'drivers', user.uid);
+      const driverDoc = await getDoc(driverRef);
+      await setDoc(driverRef, driverData, { merge: true });
+
+      await refreshDriverData();
+      toast.success(mode === 'create' ? 'Registration successful!' : 'Profile updated successfully!');
+      
+      if (mode === 'create') {
+        navigate('/driver/portal');
+      } else {
+        navigate('/driver/portal');
+      }
+    } catch (error) {
+      console.error('Error registering driver:', error);
+      toast.error('Failed to save driver information');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
@@ -138,70 +143,21 @@ export default function DriverRegistration() {
     }));
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!user) {
-      toast.error('You must be logged in to register as a driver');
-      return;
-    }
-
-    setIsSubmitting(true);
-
-    try {
-      let photoURL = '';
-      if (selectedFile) {
-        photoURL = await uploadToCloudinary(selectedFile);
-      }
-
-      const driverData: Driver = {
-        id: user.uid,
-        name: user.displayName || '',
-        email: user.email || '',
-        phone: formData.phone || '',
-        photoURL: photoURL,
-        vehicle: {
-          make: formData.vehicle.make || '',
-          model: formData.vehicle.model || '',
-          year: formData.vehicle.year || '',
-          color: formData.vehicle.color || '',
-          plate: formData.vehicle.plate || ''
-        },
-        locationId: formData.locationId || '',
-        available: false,
-        isActive: true,
-        rating: 5.0,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      };
-
-      // Save to Firestore
-      const driverRef = doc(db, 'drivers', user.uid);
-      await setDoc(driverRef, driverData);
-
-      await refreshDriverData();
-      toast.success('Registration successful!');
-      navigate('/driver/portal', { replace: true });
-    } catch (error: any) {
-      console.error('Error during registration:', error);
-      toast.error(error.message || 'Failed to complete registration');
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  // Generate year options
-  const currentYear = new Date().getFullYear();
-  const yearOptions = Array.from({ length: 25 }, (_, i) => currentYear - i);
-
   return (
-    <div className="min-h-screen bg-black text-white">
-      <main className="container mx-auto px-4 py-8 max-w-md">
+    <div className="min-h-screen bg-black py-12 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-md mx-auto">
         <div className="text-center mb-8">
-          <h1 className="text-[#C69249] text-4xl font-bold mb-4">Complete Your Profile</h1>
-          <p className="text-neutral-400">Please provide your vehicle information</p>
+          <h2 className="text-3xl font-bold text-white">
+            {mode === 'create' ? 'Driver Registration' : 'Edit Profile'}
+          </h2>
+          <p className="mt-2 text-sm text-gray-400">
+            {mode === 'create' 
+              ? 'Complete your profile to start accepting rides' 
+              : 'Update your driver profile information'}
+          </p>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-6">
           <div className="mb-4">
             <label htmlFor="locationId" className="block text-sm font-medium mb-2">
               Select Your Location
@@ -222,15 +178,6 @@ export default function DriverRegistration() {
             </select>
           </div>
 
-          <FormInput
-            label="Phone Number"
-            type="tel"
-            name="phone"
-            value={formData.phone}
-            onChange={handleChange}
-            placeholder="+1 (555) 555-5555"
-          />
-
           <div className="mb-4">
             <label htmlFor="username" className="block text-sm font-medium mb-2">
               Username
@@ -243,6 +190,21 @@ export default function DriverRegistration() {
               onChange={handleChange}
               className="w-full px-3 py-2 bg-neutral-800 border border-neutral-700 rounded-md focus:outline-none focus:ring-2 focus:ring-[#C69249]"
               placeholder="Enter your username"
+            />
+          </div>
+
+          <div className="mb-4">
+            <label htmlFor="phone" className="block text-sm font-medium mb-2">
+              Phone Number
+            </label>
+            <input
+              type="tel"
+              id="phone"
+              name="phone"
+              value={formData.phone}
+              onChange={handleChange}
+              className="w-full px-3 py-2 bg-neutral-800 border border-neutral-700 rounded-md focus:outline-none focus:ring-2 focus:ring-[#C69249]"
+              placeholder="+1 (555) 555-5555"
             />
           </div>
 
@@ -316,7 +278,7 @@ export default function DriverRegistration() {
                   className="w-full px-3 py-2 bg-neutral-800 border border-neutral-700 rounded-md focus:outline-none focus:ring-2 focus:ring-[#C69249]"
                 >
                   <option value="">Select year</option>
-                  {yearOptions.map(year => (
+                  {Array.from({ length: 25 }, (_, i) => new Date().getFullYear() - i).map(year => (
                     <option key={year} value={year}>
                       {year}
                     </option>
@@ -345,24 +307,37 @@ export default function DriverRegistration() {
               </div>
             </div>
 
-            <FormInput
-              label="License Plate"
-              name="vehicle.plate"
-              value={formData.vehicle.plate}
-              onChange={handleChange}
-              placeholder="Enter license plate number"
-            />
+            <div>
+              <label htmlFor="vehicle.plate" className="block text-sm font-medium mb-2">
+                License Plate
+              </label>
+              <input
+                type="text"
+                id="vehicle.plate"
+                name="vehicle.plate"
+                value={formData.vehicle.plate}
+                onChange={handleChange}
+                className="w-full px-3 py-2 bg-neutral-800 border border-neutral-700 rounded-md focus:outline-none focus:ring-2 focus:ring-[#C69249]"
+                placeholder="Enter license plate number"
+              />
+            </div>
           </div>
 
-          <button
-            type="submit"
-            disabled={isSubmitting}
-            className="w-full py-3 px-4 bg-[#C69249] text-white font-semibold rounded-md hover:bg-[#B58239] focus:outline-none focus:ring-2 focus:ring-[#C69249] focus:ring-offset-2 focus:ring-offset-black disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {isSubmitting ? 'Completing Registration...' : 'Complete Registration'}
-          </button>
+          <div>
+            <button
+              type="submit"
+              disabled={isSubmitting}
+              className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-[#C69249] hover:bg-[#B37F3D] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#C69249]"
+            >
+              {isSubmitting ? (
+                <div className="animate-spin rounded-full h-5 w-5 border-t-2 border-white" />
+              ) : (
+                mode === 'create' ? 'Complete Registration' : 'Update Profile'
+              )}
+            </button>
+          </div>
         </form>
-      </main>
+      </div>
     </div>
   );
 }

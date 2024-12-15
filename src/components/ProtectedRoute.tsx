@@ -1,53 +1,31 @@
-import { ReactNode } from 'react';
-import { Navigate, useLocation } from 'react-router-dom';
+import { Navigate } from 'react-router-dom';
 import { useAuth } from '../providers/AuthProvider';
 
-export interface ProtectedRouteProps {
-  children: ReactNode;
-  userType: 'driver' | 'rider' | 'admin' | 'any';
+interface ProtectedRouteProps {
+  children: React.ReactNode;
+  userType: 'driver' | 'rider';
 }
 
 export default function ProtectedRoute({ children, userType }: ProtectedRouteProps) {
   const { user, driver, rider, loading } = useAuth();
-  const location = useLocation();
-
-  console.log('ProtectedRoute State:', {
-    path: location.pathname,
-    userType,
-    hasUser: !!user,
-    hasDriver: !!driver,
-    hasRider: !!rider,
-    loading
-  });
 
   if (loading) {
-    console.log('Loading state, showing spinner');
-    return (
-      <div className="min-h-screen bg-black flex items-center justify-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-[#C69249]" />
-      </div>
-    );
+    return <div>Loading...</div>;
   }
 
   if (!user) {
-    const loginPath = `/${userType}/login`;
-    console.log('No user, redirecting to:', loginPath);
-    return <Navigate to={loginPath} state={{ from: location }} replace />;
+    return <Navigate to={`/${userType}/login`} replace />;
   }
 
-  // Check for specific user type requirements
-  if (userType === 'driver') {
-    if (!driver) {
-      console.log('No driver data, redirecting to registration');
-      return <Navigate to="/driver/register" state={{ from: location }} replace />;
-    }
-  } else if (userType === 'rider') {
-    // For riders, we don't need to redirect to registration since they'll be registered during login
-    if (!rider && !loading) {
-      console.log('No rider data, but continuing to portal');
-    }
+  // For driver routes
+  if (userType === 'driver' && !driver) {
+    return <Navigate to="/driver/login" replace />;
   }
 
-  console.log('All checks passed, rendering children');
+  // For rider routes
+  if (userType === 'rider' && !rider) {
+    return <Navigate to="/rider/login" replace />;
+  }
+
   return <>{children}</>;
 }

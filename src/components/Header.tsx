@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Menu, X, User, ChevronDown } from 'lucide-react';
+import { Menu, X, User, ChevronDown, Bell } from 'lucide-react';
 import { auth, db } from '../lib/firebase';
 import { signOut } from 'firebase/auth';
 import { doc, getDoc } from 'firebase/firestore';
@@ -13,6 +13,8 @@ export function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
   const [userProfile, setUserProfile] = useState<Driver | Rider | null>(null);
+  const [showNotifications, setShowNotifications] = useState(false);
+  const [showProfile, setShowProfile] = useState(false);
   const { user, driver, rider } = useAuth();
   const userType = driver ? 'driver' : rider ? 'rider' : null;
 
@@ -47,6 +49,16 @@ export function Header() {
     } catch (error) {
       console.error('Logout error:', error);
     }
+  };
+
+  const toggleNotifications = () => {
+    setShowNotifications(!showNotifications);
+    setShowProfile(false);
+  };
+
+  const toggleProfile = () => {
+    setShowProfile(!showProfile);
+    setShowNotifications(false);
   };
 
   return (
@@ -95,6 +107,54 @@ export function Header() {
                     </div>
                   )}
                 </div>
+                <button
+                  onClick={toggleNotifications}
+                  className="relative p-2 hover:bg-gray-800 rounded-full"
+                >
+                  <Bell className="w-6 h-6" />
+                  {showNotifications && (
+                    <div className="absolute right-0 mt-2 w-80 bg-black border border-gray-700 rounded-lg shadow-lg p-4">
+                      <h3 className="text-lg font-semibold mb-2">Notifications</h3>
+                      <div className="space-y-2">
+                        {/* Add your notifications here */}
+                        <p className="text-gray-400">No new notifications</p>
+                      </div>
+                    </div>
+                  )}
+                </button>
+                <button
+                  onClick={toggleProfile}
+                  className="relative p-2 hover:bg-gray-800 rounded-full"
+                >
+                  <User className="w-6 h-6" />
+                  {showProfile && (
+                    <div className="absolute right-0 mt-2 w-48 bg-black border border-gray-700 rounded-lg shadow-lg">
+                      <div className="p-4">
+                        <div className="font-semibold mb-2">{user?.name || 'Guest'}</div>
+                        <div className="text-sm text-gray-400 mb-4">{user?.email}</div>
+                        <hr className="border-gray-700 mb-4" />
+                        <ul className="space-y-2">
+                          <li>
+                            <Link
+                              to="/settings"
+                              className="block px-4 py-2 hover:bg-gray-800 rounded"
+                            >
+                              Settings
+                            </Link>
+                          </li>
+                          <li>
+                            <button
+                              onClick={handleLogout}
+                              className="w-full text-left px-4 py-2 text-red-500 hover:bg-gray-800 rounded"
+                            >
+                              Sign Out
+                            </button>
+                          </li>
+                        </ul>
+                      </div>
+                    </div>
+                  )}
+                </button>
               </>
             ) : (
               <>

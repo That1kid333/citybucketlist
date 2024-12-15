@@ -6,12 +6,17 @@ export interface RideRequest {
   locationId: string;
 }
 
-export interface Ride extends RideRequest {
-  id: string;
-  riderId: string;
+export interface Ride {
+  id?: string;
+  riderId: string | null;
   driverId?: string;
-  status: 'pending' | 'accepted' | 'declined' | 'completed' | 'cancelled';
-  created_at: string;
-  scheduled_time: string;
-  updated_at?: string;
+  driverName?: string;
+  scheduledTime: string;
+  pickup?: string;
+  dropoff?: string;
+  passengers?: number;
+  notes?: string;
+  status: 'pending' | 'scheduled' | 'assigned' | 'completed' | 'cancelled';
+  createdAt: string;
+  updatedAt: string;
 }

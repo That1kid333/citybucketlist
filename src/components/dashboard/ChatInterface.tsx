@@ -119,13 +119,13 @@ export function ChatInterface({ riderId, riderName }: ChatInterfaceProps) {
               className={`flex ${message.isDriver ? 'justify-end' : 'justify-start'}`}
             >
               <div
-                className={`max-w-[70%] rounded-lg p-3 ${
+                className={`max-w-[85%] sm:max-w-[70%] rounded-lg p-3 ${
                   message.isDriver
                     ? 'bg-[#C69249] text-zinc-200'
                     : 'bg-zinc-800 text-zinc-400'
                 }`}
               >
-                <p>{message.content}</p>
+                <p className="break-words">{message.content}</p>
                 <p className="text-xs mt-1 opacity-70">
                   {formatTime(message.timestamp)}
                 </p>
@@ -138,24 +138,26 @@ export function ChatInterface({ riderId, riderName }: ChatInterfaceProps) {
 
       {/* Message Input */}
       <form onSubmit={handleSendMessage} className="p-4 border-t border-zinc-800">
-        <div className="flex items-center space-x-2">
-          <button
-            type="button"
-            className="p-2 hover:bg-zinc-800 rounded-full text-zinc-400"
-          >
-            <Paperclip className="w-5 h-5" />
-          </button>
-          <input
-            type="text"
-            value={newMessage}
-            onChange={(e) => setNewMessage(e.target.value)}
-            placeholder="Type a message..."
-            className="flex-1 bg-zinc-800 text-zinc-400 placeholder-zinc-500 rounded-lg px-4 py-2 focus:outline-none focus:ring-1 focus:ring-[#C69249]"
-          />
+        <div className="flex items-center gap-2">
+          <div className="relative flex-1">
+            <input
+              type="text"
+              value={newMessage}
+              onChange={(e) => setNewMessage(e.target.value)}
+              placeholder="Type a message..."
+              className="w-full bg-zinc-800 text-zinc-400 placeholder-zinc-500 rounded-lg pl-4 pr-10 py-3 focus:outline-none focus:ring-2 focus:ring-[#C69249]"
+            />
+            <button
+              type="button"
+              className="absolute right-2 top-1/2 -translate-y-1/2 p-2 text-zinc-400 hover:text-zinc-300"
+            >
+              <Paperclip className="w-5 h-5" />
+            </button>
+          </div>
           <button
             type="submit"
             disabled={!newMessage.trim()}
-            className="p-2 bg-[#C69249] text-zinc-200 rounded-full hover:bg-[#B58239] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="p-3 bg-[#C69249] text-zinc-200 rounded-lg hover:bg-[#B58239] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <Send className="w-5 h-5" />
           </button>
