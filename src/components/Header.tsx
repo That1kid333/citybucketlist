@@ -18,6 +18,7 @@ export function Header() {
   const { user, driver, rider } = useAuth();
   const userType = driver ? 'driver' : rider ? 'rider' : null;
   const menuRef = useRef<HTMLDivElement>(null);
+  const [hoverTimeout, setHoverTimeout] = useState<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     const fetchUserData = async () => {
@@ -51,8 +52,32 @@ export function Header() {
     };
 
     document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      if (hoverTimeout) {
+        clearTimeout(hoverTimeout);
+      }
+    };
+  }, [hoverTimeout]);
+
+  const handleMouseEnter = () => {
+    if (hoverTimeout) {
+      clearTimeout(hoverTimeout);
+      setHoverTimeout(null);
+    }
+    setIsProfileMenuOpen(true);
+  };
+
+  const handleMouseLeave = () => {
+    const timeout = setTimeout(() => {
+      setIsProfileMenuOpen(false);
+    }, 300); // 300ms delay before closing
+    setHoverTimeout(timeout);
+  };
+
+  const handleProfileClick = () => {
+    setIsProfileMenuOpen(!isProfileMenuOpen);
+  };
 
   const handleLogout = async () => {
     try {
@@ -94,9 +119,13 @@ export function Header() {
                 <Link to={`/${userType}/portal`} className="text-white hover:text-gray-300">
                   Dashboard
                 </Link>
-                <div className="relative">
+                <div 
+                  className="relative"
+                  onMouseEnter={handleMouseEnter}
+                  onMouseLeave={handleMouseLeave}
+                >
                   <button
-                    onClick={() => setIsProfileMenuOpen(!isProfileMenuOpen)}
+                    onClick={handleProfileClick}
                     className="flex items-center text-white hover:text-gray-300"
                   >
                     <User className="w-5 h-5 mr-2" />
@@ -171,34 +200,70 @@ export function Header() {
                 </button>
               </>
             ) : (
-              <>
-                <div className="relative group">
-                  <button className="text-white hover:text-gray-300 flex items-center">
-                    Driver <ChevronDown className="w-4 h-4 ml-1" />
+              <div className="flex items-center space-x-4">
+                <div 
+                  className="relative group"
+                  onMouseEnter={handleMouseEnter}
+                  onMouseLeave={handleMouseLeave}
+                >
+                  <button
+                    onClick={handleProfileClick}
+                    className="text-white hover:text-gray-300 flex items-center"
+                  >
+                    Drivers
+                    <ChevronDown className="w-4 h-4 ml-1" />
                   </button>
-                  <div className="absolute hidden group-hover:block right-0 mt-2 w-48 bg-black border border-gray-800 rounded-lg shadow-lg">
-                    <Link to="/driver/login" className="block px-4 py-2 text-white hover:bg-gray-800">
-                      Driver Login
-                    </Link>
-                    <Link to="/driver/register" className="block px-4 py-2 text-white hover:bg-gray-800">
-                      Driver Sign Up
-                    </Link>
-                  </div>
+                  {isProfileMenuOpen && (
+                    <div className="absolute left-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-50">
+                      <Link
+                        to="/driver/login"
+                        className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                        onClick={() => setIsProfileMenuOpen(false)}
+                      >
+                        Login
+                      </Link>
+                      <Link
+                        to="/driver/register"
+                        className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                        onClick={() => setIsProfileMenuOpen(false)}
+                      >
+                        Register
+                      </Link>
+                    </div>
+                  )}
                 </div>
-                <div className="relative group">
-                  <button className="text-white hover:text-gray-300 flex items-center">
-                    Rider <ChevronDown className="w-4 h-4 ml-1" />
+                <div 
+                  className="relative group"
+                  onMouseEnter={handleMouseEnter}
+                  onMouseLeave={handleMouseLeave}
+                >
+                  <button
+                    onClick={handleProfileClick}
+                    className="text-white hover:text-gray-300 flex items-center"
+                  >
+                    Riders
+                    <ChevronDown className="w-4 h-4 ml-1" />
                   </button>
-                  <div className="absolute hidden group-hover:block right-0 mt-2 w-48 bg-black border border-gray-800 rounded-lg shadow-lg">
-                    <Link to="/rider/login" className="block px-4 py-2 text-white hover:bg-gray-800">
-                      Rider Login
-                    </Link>
-                    <Link to="/rider/register" className="block px-4 py-2 text-white hover:bg-gray-800">
-                      Rider Sign Up
-                    </Link>
-                  </div>
+                  {isProfileMenuOpen && (
+                    <div className="absolute left-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-50">
+                      <Link
+                        to="/rider/login"
+                        className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                        onClick={() => setIsProfileMenuOpen(false)}
+                      >
+                        Login
+                      </Link>
+                      <Link
+                        to="/rider/register"
+                        className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                        onClick={() => setIsProfileMenuOpen(false)}
+                      >
+                        Register
+                      </Link>
+                    </div>
+                  )}
                 </div>
-              </>
+              </div>
             )}
           </nav>
 

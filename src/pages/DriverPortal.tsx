@@ -156,15 +156,9 @@ export default function DriverPortal() {
 
   return (
     <div className="min-h-screen bg-black text-white">
-      <MobileNavigation
-        userType="driver"
-        currentView={location.pathname.split('/').pop() || 'overview'}
-        userName={driver?.name}
-        userPhoto={driver?.photoURL}
-        notificationCount={0}
-        onSignOut={handleSignOut}
-      >
-        <div className="p-4">
+      {/* Desktop View */}
+      <div className="hidden md:block">
+        <div className="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
           {location.pathname.endsWith('/settings') || location.pathname.includes('/portal/settings') ? (
             <>
               <DriverInformation driver={driver} />
@@ -188,8 +182,46 @@ export default function DriverPortal() {
             <Overview driver={driver} />
           )}
         </div>
-      </MobileNavigation>
+      </div>
 
+      {/* Mobile View */}
+      <div className="md:hidden">
+        <MobileNavigation
+          userType="driver"
+          currentView={location.pathname.split('/').pop() || 'overview'}
+          userName={driver?.name}
+          userPhoto={driver?.photoURL}
+          notificationCount={0}
+          onSignOut={handleSignOut}
+        >
+          <div className="p-4">
+            {location.pathname.endsWith('/settings') || location.pathname.includes('/portal/settings') ? (
+              <>
+                <DriverInformation driver={driver} />
+                <div className="mt-6">
+                  <Settings user={driver} userType="driver" />
+                </div>
+              </>
+            ) : location.pathname.includes('/schedule') ? (
+              <ScheduleManager driver={driver} />
+            ) : location.pathname.includes('/messages') ? (
+              <CommunicationHub driver={driver} />
+            ) : location.pathname.includes('/rides') ? (
+              <RidesManagement 
+                driver={driver}
+                onTransferRide={(rideId) => {
+                  setSelectedRide(rideId);
+                  setShowTransferModal(true);
+                }}
+              />
+            ) : (
+              <Overview driver={driver} />
+            )}
+          </div>
+        </MobileNavigation>
+      </div>
+
+      {/* Transfer Modal */}
       {showTransferModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
           <div className="bg-zinc-900 rounded-lg w-full max-w-lg">

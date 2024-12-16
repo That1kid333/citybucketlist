@@ -15,6 +15,14 @@ interface OverviewProps {
 }
 
 export default function Overview({ driver }: OverviewProps) {
+  if (!driver) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <p className="text-gray-400">Loading driver information...</p>
+      </div>
+    );
+  }
+
   const stats = [
     {
       icon: <Clock className="w-8 h-8 text-[#C69249]" />,
@@ -50,68 +58,65 @@ export default function Overview({ driver }: OverviewProps) {
           {stats.map((stat, index) => (
             <div 
               key={index}
-              className="bg-neutral-900 p-4 sm:p-6 rounded-lg"
+              className="bg-zinc-900 p-6 rounded-lg flex flex-col items-center justify-center text-center"
             >
-              <div className="flex items-center justify-between mb-3 sm:mb-4">
-                {stat.icon}
-                <span className="text-lg sm:text-2xl font-bold text-white">{stat.value}</span>
-              </div>
-              <p className="text-sm sm:text-base text-neutral-400">{stat.label}</p>
+              {stat.icon}
+              <h3 className="mt-4 text-lg font-medium text-white">{stat.value}</h3>
+              <p className="mt-1 text-sm text-gray-400">{stat.label}</p>
             </div>
           ))}
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-8">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Upcoming Rides */}
-        <div className="bg-neutral-900 p-4 sm:p-6 rounded-lg">
-          <div className="flex items-center gap-2 mb-4">
-            <Calendar className="w-5 h-5 text-[#C69249]" />
-            <h3 className="text-lg font-semibold text-white">Upcoming Rides</h3>
+        <div className="bg-zinc-900 rounded-lg p-6">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-semibold text-[#C69249] flex items-center gap-2">
+              <Calendar className="w-5 h-5" />
+              Upcoming Rides
+            </h3>
           </div>
-          
-          {upcomingRides.length > 0 ? (
-            <div className="space-y-3 sm:space-y-4">
-              {upcomingRides.map((ride, index) => (
-                <div key={index} className="bg-neutral-800 p-3 sm:p-4 rounded-lg">
-                  <p className="text-white font-medium mb-1">{ride.customerName}</p>
-                  <div className="space-y-1">
-                    <p className="text-sm text-neutral-400 flex items-center gap-2">
-                      <Clock className="w-4 h-4" />
-                      {ride.scheduledTime}
-                    </p>
-                    <p className="text-sm text-neutral-400 flex items-center gap-2">
-                      <MapPin className="w-4 h-4" />
-                      {ride.pickup} → {ride.dropoff}
-                    </p>
+          <div className="space-y-4">
+            {upcomingRides.length > 0 ? (
+              upcomingRides.map((ride, index) => (
+                <div key={index} className="flex items-start space-x-4 bg-zinc-800 p-4 rounded-lg">
+                  <MapPin className="w-5 h-5 text-[#C69249] mt-1" />
+                  <div>
+                    <p className="font-medium">{ride.pickup} → {ride.dropoff}</p>
+                    <p className="text-sm text-gray-400">{ride.time}</p>
                   </div>
                 </div>
-              ))}
-            </div>
-          ) : (
-            <p className="text-neutral-400">No upcoming rides scheduled</p>
-          )}
+              ))
+            ) : (
+              <p className="text-gray-400">No upcoming rides</p>
+            )}
+          </div>
         </div>
 
         {/* Recent Notifications */}
-        <div className="bg-neutral-900 p-4 sm:p-6 rounded-lg">
-          <div className="flex items-center gap-2 mb-4">
-            <BellRing className="w-5 h-5 text-[#C69249]" />
-            <h3 className="text-lg font-semibold text-white">Recent Notifications</h3>
+        <div className="bg-zinc-900 rounded-lg p-6">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-semibold text-[#C69249] flex items-center gap-2">
+              <BellRing className="w-5 h-5" />
+              Recent Notifications
+            </h3>
           </div>
-          
-          {recentNotifications.length > 0 ? (
-            <div className="space-y-3 sm:space-y-4">
-              {recentNotifications.map((notification, index) => (
-                <div key={index} className="bg-neutral-800 p-3 sm:p-4 rounded-lg">
-                  <p className="text-white text-sm sm:text-base mb-1">{notification.message}</p>
-                  <p className="text-xs sm:text-sm text-neutral-400">{notification.time}</p>
+          <div className="space-y-4">
+            {recentNotifications.length > 0 ? (
+              recentNotifications.map((notification, index) => (
+                <div key={index} className="flex items-start space-x-4 bg-zinc-800 p-4 rounded-lg">
+                  <div className="w-2 h-2 rounded-full bg-[#C69249] mt-2" />
+                  <div>
+                    <p className="font-medium">{notification.title}</p>
+                    <p className="text-sm text-gray-400">{notification.message}</p>
+                  </div>
                 </div>
-              ))}
-            </div>
-          ) : (
-            <p className="text-neutral-400">No new notifications</p>
-          )}
+              ))
+            ) : (
+              <p className="text-gray-400">No recent notifications</p>
+            )}
+          </div>
         </div>
       </div>
     </div>
