@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Menu, X, User, ChevronDown, Bell } from 'lucide-react';
 import { auth, db } from '../lib/firebase';
@@ -17,6 +17,7 @@ export function Header() {
   const [showProfile, setShowProfile] = useState(false);
   const { user, driver, rider } = useAuth();
   const userType = driver ? 'driver' : rider ? 'rider' : null;
+  const menuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const fetchUserData = async () => {
@@ -39,6 +40,19 @@ export function Header() {
 
     fetchUserData();
   }, [user, userType]);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+        setIsProfileMenuOpen(false);
+        setShowNotifications(false);
+        setShowProfile(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   const handleLogout = async () => {
     try {
@@ -74,7 +88,7 @@ export function Header() {
           </Link>
 
           {/* Desktop Navigation */}
-          <nav className="hidden md:flex items-center space-x-8">
+          <nav className="hidden md:flex items-center space-x-8" ref={menuRef}>
             {user ? (
               <>
                 <Link to={`/${userType}/portal`} className="text-white hover:text-gray-300">
@@ -90,7 +104,7 @@ export function Header() {
                     <ChevronDown className="w-4 h-4 ml-1" />
                   </button>
                   {isProfileMenuOpen && (
-                    <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1">
+                    <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-50">
                       <Link
                         to={`/${userType}/settings`}
                         className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"

@@ -43,6 +43,7 @@ function App() {
             <Route path="/driver/login" element={<DriverLogin />} />
             <Route path="/driver/register" element={<DriverRegistration mode="create" />} />
             <Route path="/driver" element={<Navigate to="/driver/portal/overview" replace />} />
+            <Route path="/driver/portal" element={<Navigate to="/driver/portal/overview" replace />} />
             <Route
               path="/driver/portal/*"
               element={
