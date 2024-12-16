@@ -15,6 +15,8 @@ export function Header() {
   const [userProfile, setUserProfile] = useState<Driver | Rider | null>(null);
   const [showNotifications, setShowNotifications] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
+  const [driverMenuOpen, setDriverMenuOpen] = useState(false);
+  const [riderMenuOpen, setRiderMenuOpen] = useState(false);
   const { user, driver, rider } = useAuth();
   const userType = driver ? 'driver' : rider ? 'rider' : null;
   const menuRef = useRef<HTMLDivElement>(null);
@@ -48,6 +50,8 @@ export function Header() {
         setIsProfileMenuOpen(false);
         setShowNotifications(false);
         setShowProfile(false);
+        setDriverMenuOpen(false);
+        setRiderMenuOpen(false);
       }
     };
 
@@ -72,6 +76,30 @@ export function Header() {
     const timeout = setTimeout(() => {
       setIsProfileMenuOpen(false);
     }, 300); // 300ms delay before closing
+    setHoverTimeout(timeout);
+  };
+
+  const handleDriverMouseEnter = () => {
+    setDriverMenuOpen(true);
+    setRiderMenuOpen(false);
+  };
+
+  const handleDriverMouseLeave = () => {
+    const timeout = setTimeout(() => {
+      setDriverMenuOpen(false);
+    }, 300);
+    setHoverTimeout(timeout);
+  };
+
+  const handleRiderMouseEnter = () => {
+    setRiderMenuOpen(true);
+    setDriverMenuOpen(false);
+  };
+
+  const handleRiderMouseLeave = () => {
+    const timeout = setTimeout(() => {
+      setRiderMenuOpen(false);
+    }, 300);
     setHoverTimeout(timeout);
   };
 
@@ -203,29 +231,29 @@ export function Header() {
               <div className="flex items-center space-x-4">
                 <div 
                   className="relative group"
-                  onMouseEnter={handleMouseEnter}
-                  onMouseLeave={handleMouseLeave}
+                  onMouseEnter={handleDriverMouseEnter}
+                  onMouseLeave={handleDriverMouseLeave}
                 >
                   <button
-                    onClick={handleProfileClick}
+                    onClick={() => setDriverMenuOpen(!driverMenuOpen)}
                     className="text-white hover:text-gray-300 flex items-center"
                   >
                     Drivers
                     <ChevronDown className="w-4 h-4 ml-1" />
                   </button>
-                  {isProfileMenuOpen && (
+                  {driverMenuOpen && (
                     <div className="absolute left-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-50">
                       <Link
                         to="/driver/login"
                         className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-                        onClick={() => setIsProfileMenuOpen(false)}
+                        onClick={() => setDriverMenuOpen(false)}
                       >
                         Login
                       </Link>
                       <Link
                         to="/driver/register"
                         className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-                        onClick={() => setIsProfileMenuOpen(false)}
+                        onClick={() => setDriverMenuOpen(false)}
                       >
                         Register
                       </Link>
@@ -234,29 +262,29 @@ export function Header() {
                 </div>
                 <div 
                   className="relative group"
-                  onMouseEnter={handleMouseEnter}
-                  onMouseLeave={handleMouseLeave}
+                  onMouseEnter={handleRiderMouseEnter}
+                  onMouseLeave={handleRiderMouseLeave}
                 >
                   <button
-                    onClick={handleProfileClick}
+                    onClick={() => setRiderMenuOpen(!riderMenuOpen)}
                     className="text-white hover:text-gray-300 flex items-center"
                   >
                     Riders
                     <ChevronDown className="w-4 h-4 ml-1" />
                   </button>
-                  {isProfileMenuOpen && (
+                  {riderMenuOpen && (
                     <div className="absolute left-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-50">
                       <Link
                         to="/rider/login"
                         className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-                        onClick={() => setIsProfileMenuOpen(false)}
+                        onClick={() => setRiderMenuOpen(false)}
                       >
                         Login
                       </Link>
                       <Link
                         to="/rider/register"
                         className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-                        onClick={() => setIsProfileMenuOpen(false)}
+                        onClick={() => setRiderMenuOpen(false)}
                       >
                         Register
                       </Link>

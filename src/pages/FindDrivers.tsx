@@ -3,7 +3,7 @@ import { Header } from '../components/Header';
 import { DriverProfileCard } from '../components/DriverProfileCard';
 import { Switch } from '../components/ui/switch';
 import { useAuth } from '../hooks/useAuth';
-import { doc, updateDoc, onSnapshot, collection, query, where, getDocs } from 'firebase/firestore';
+import { doc, updateDoc, onSnapshot, collection, getDocs } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { Driver } from '../types/driver';
 import { toast } from 'react-hot-toast';
@@ -38,23 +38,25 @@ export default function FindDrivers() {
 
   // Fetch all drivers grouped by location
   useEffect(() => {
+    console.log('Starting to fetch all drivers...');
     const fetchAllDrivers = async () => {
       try {
         setLoading(true);
         const driversRef = collection(db, 'drivers');
-        const q = query(
-          driversRef,
-          where('available', '==', true)
-        );
+        const querySnapshot = await getDocs(driversRef);
 
-        const querySnapshot = await getDocs(q);
-        const drivers = querySnapshot.docs
-          .map(doc => ({ id: doc.id, ...doc.data() } as Driver))
-          .filter(d => d.id !== user?.uid);
+        console.log('Total drivers found in database:', querySnapshot.size);
+
+        // Map all drivers without any filtering
+        const drivers = querySnapshot.docs.map(doc => {
+          const data = doc.data();
+          console.log('Processing driver:', { id: doc.id, locationId: data.locationId, username: data.username });
+          return { id: doc.id, ...data } as Driver;
+        });
 
         // Group drivers by location
         const groupedDrivers = drivers.reduce((acc, driver) => {
-          const locationId = driver.locationId;
+          const locationId = driver.locationId || 'unassigned';
           if (!acc[locationId]) {
             acc[locationId] = [];
           }
@@ -62,6 +64,15 @@ export default function FindDrivers() {
           return acc;
         }, {} as { [key: string]: Driver[] });
 
+        // Sort drivers within each location
+        Object.keys(groupedDrivers).forEach(locationId => {
+          groupedDrivers[locationId].sort((a, b) => 
+            (a.username || a.email || '').localeCompare(b.username || b.email || '')
+          );
+          console.log(`Location ${locationId}: ${groupedDrivers[locationId].length} drivers`);
+        });
+
+        console.log('Final grouped drivers:', groupedDrivers);
         setAllDrivers(groupedDrivers);
       } catch (error) {
         console.error('Error fetching drivers:', error);
@@ -72,7 +83,7 @@ export default function FindDrivers() {
     };
 
     fetchAllDrivers();
-  }, [user?.uid]);
+  }, []);
 
   const handleToggleOnline = async (checked: boolean) => {
     if (!user?.uid || !driverData) return;
@@ -124,13 +135,15 @@ export default function FindDrivers() {
 
         <div className="space-y-12">
           {Object.entries(allDrivers).map(([locationId, drivers]) => {
-            const location = locations.find(loc => loc.id === locationId);
-            if (!location) return null;
+            // For the 'unassigned' group, use a different title
+            const locationName = locationId === 'unassigned' 
+              ? 'Unassigned Location' 
+              : locations.find(loc => loc.id === locationId)?.name || locationId;
 
             return (
               <div key={locationId} className="space-y-4">
                 <h2 className="text-xl font-bold text-[#C69249]">
-                  {location.name} ({drivers.length})
+                  {locationName} ({drivers.length})
                 </h2>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                   {drivers.map((driver) => (
