@@ -122,6 +122,7 @@ function DriverLogin() {
               name="email"
               value={formData.email}
               onChange={handleInputChange}
+              error={error}
               required
             />
             
@@ -131,48 +132,46 @@ function DriverLogin() {
               name="password"
               value={formData.password}
               onChange={handleInputChange}
+              error={error}
               required
             />
-            
-            {error && (
-              <div className="text-red-500 text-sm">{error}</div>
-            )}
-            
-            <div className="flex flex-col space-y-4">
+
+            <div className="flex items-center justify-between">
+              <button
+                type="button"
+                onClick={() => setShowPasswordReset(true)}
+                className="text-sm text-[#C69249] hover:text-[#E5B980]"
+              >
+                Forgot password?
+              </button>
+              <Link to="/driver/register" className="text-sm text-[#C69249] hover:text-[#E5B980]">
+                Sign up for an account
+              </Link>
+            </div>
+
+            <div>
               <button
                 type="submit"
                 disabled={isLoading}
-                className="w-full bg-[#C69249] text-white py-3 px-4 rounded-lg hover:bg-[#A77841] transition-colors disabled:opacity-50"
+                className={`w-full py-2 px-4 bg-[#C69249] text-white rounded-md hover:bg-[#E5B980] focus:outline-none focus:ring-2 focus:ring-[#C69249] ${
+                  isLoading ? 'opacity-50 cursor-not-allowed' : ''
+                }`}
               >
                 {isLoading ? 'Logging in...' : 'Login'}
-              </button>
-              
-              <button
-                type="button"
-                onClick={handleGoogleSignIn}
-                disabled={isLoading}
-                className="w-full bg-white text-black py-3 px-4 rounded-lg hover:bg-gray-100 transition-colors disabled:opacity-50 flex items-center justify-center space-x-2"
-              >
-                <Mail className="w-5 h-5" />
-                <span>Sign in with Google</span>
               </button>
             </div>
           </form>
           
           <div className="mt-6 text-center">
             <button
-              onClick={() => setShowPasswordReset(true)}
-              className="text-[#C69249] hover:text-[#A77841] transition-colors"
+              type="button"
+              onClick={handleGoogleSignIn}
+              disabled={isLoading}
+              className="w-full bg-white text-black py-3 px-4 rounded-lg hover:bg-gray-100 transition-colors disabled:opacity-50 flex items-center justify-center space-x-2"
             >
-              Forgot Password?
+              <Mail className="w-5 h-5" />
+              <span>Sign in with Google</span>
             </button>
-          </div>
-          
-          <div className="mt-8 text-center text-gray-400">
-            Don't have an account?{' '}
-            <Link to="/driver/signup" className="text-[#C69249] hover:text-[#A77841] transition-colors">
-              Sign Up
-            </Link>
           </div>
         </div>
       </main>

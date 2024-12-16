@@ -23,6 +23,8 @@ import RideRequestConfirmation from './pages/mobile/RideRequestConfirmation';
 import RiderSchedule from './pages/mobile/RiderSchedule';
 import MobileManagedRidersPage from './pages/mobile/MobileManagedRidersPage';
 import { MobileSchedulePage } from './pages/mobile/MobileSchedulePage';
+import AdminDrivers from './pages/AdminDrivers';
+import AdminLogin from './pages/AdminLogin';
 
 function App() {
   return (
@@ -102,6 +104,10 @@ function App() {
                 </ProtectedRoute>
               } 
             />
+
+            {/* Admin Routes */}
+            <Route path="/admin/login" element={<AdminLogin />} />
+            <Route path="/admin/drivers" element={<AdminDrivers />} />
 
             {/* Catch all route */}
             <Route path="*" element={<Navigate to="/" replace />} />

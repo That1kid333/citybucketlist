@@ -130,7 +130,24 @@ export default function DriverPortal() {
 
   // Render error state if no driver data
   if (!driver) {
-    return null;
+    return (
+      <div className="min-h-screen bg-black flex items-center justify-center p-4">
+        <div className="max-w-md w-full bg-neutral-900 rounded-lg p-8 text-center">
+          <h1 className="text-2xl font-bold text-white mb-4">
+            Driver Not Found
+          </h1>
+          <p className="text-neutral-400 mb-6">
+            We could not find your driver profile. Please try logging in again.
+          </p>
+          <button
+            onClick={() => navigate('/driver/login')}
+            className="w-full bg-[#C69249] text-white py-2 px-4 rounded hover:bg-[#B58239]"
+          >
+            Back to Login
+          </button>
+        </div>
+      </div>
+    );
   }
 
   return (

@@ -18,6 +18,12 @@ service cloud.firestore {
       return isSignedIn() && request.auth.token.admin == true;
     }
 
+    // User rules
+    match /users/{userId} {
+      allow read: if true;
+      allow write: if isSignedIn() && request.auth.uid == userId;
+    }
+
     // Rider rules
     match /riders/{riderId} {
       allow read: if isSignedIn() && (request.auth.uid == riderId || isDriver() || isAdmin());
@@ -26,16 +32,10 @@ service cloud.firestore {
 
     // Driver rules
     match /drivers/{driverId} {
-      allow read: if request.auth != null && 
-        (request.auth.uid == driverId || 
-         exists(/databases/$(database)/documents/drivers/$(request.auth.uid)));
-      allow write: if request.auth != null && request.auth.uid == driverId;
-      
-      // Allow updating stats
-      allow update: if request.auth != null && 
-        request.auth.uid == driverId && 
-        request.resource.data.diff(resource.data).affectedKeys()
-          .hasOnly(['stats', 'stats.completedRides', 'stats.totalRides', 'stats.cancelledRides']);
+      allow read: if true;
+      allow create: if true;
+      allow update: if isSignedIn() && request.auth.uid == driverId;
+      allow delete: if false;
     }
 
     // Rides rules
@@ -145,7 +145,7 @@ service cloud.firestore {
     }
 
     match /{document=**} {
-      allow read: if true;
+      allow read, write: if false;
     }
   }
 }

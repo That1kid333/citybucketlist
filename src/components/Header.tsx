@@ -158,12 +158,32 @@ export function Header() {
               </>
             ) : (
               <>
-                <Link to="/driver/login" className="text-white hover:text-gray-300">
-                  Driver Login
-                </Link>
-                <Link to="/rider/login" className="text-white hover:text-gray-300">
-                  Rider Login
-                </Link>
+                <div className="relative group">
+                  <button className="text-white hover:text-gray-300 flex items-center">
+                    Driver <ChevronDown className="w-4 h-4 ml-1" />
+                  </button>
+                  <div className="absolute hidden group-hover:block right-0 mt-2 w-48 bg-black border border-gray-800 rounded-lg shadow-lg">
+                    <Link to="/driver/login" className="block px-4 py-2 text-white hover:bg-gray-800">
+                      Driver Login
+                    </Link>
+                    <Link to="/driver/register" className="block px-4 py-2 text-white hover:bg-gray-800">
+                      Driver Sign Up
+                    </Link>
+                  </div>
+                </div>
+                <div className="relative group">
+                  <button className="text-white hover:text-gray-300 flex items-center">
+                    Rider <ChevronDown className="w-4 h-4 ml-1" />
+                  </button>
+                  <div className="absolute hidden group-hover:block right-0 mt-2 w-48 bg-black border border-gray-800 rounded-lg shadow-lg">
+                    <Link to="/rider/login" className="block px-4 py-2 text-white hover:bg-gray-800">
+                      Rider Login
+                    </Link>
+                    <Link to="/rider/register" className="block px-4 py-2 text-white hover:bg-gray-800">
+                      Rider Sign Up
+                    </Link>
+                  </div>
+                </div>
               </>
             )}
           </nav>
@@ -205,20 +225,40 @@ export function Header() {
               </>
             ) : (
               <>
-                <Link
-                  to="/driver/login"
-                  className="block text-white py-2"
-                  onClick={() => setIsMenuOpen(false)}
-                >
-                  Driver Login
-                </Link>
-                <Link
-                  to="/rider/login"
-                  className="block text-white py-2"
-                  onClick={() => setIsMenuOpen(false)}
-                >
-                  Rider Login
-                </Link>
+                <div className="border-b border-gray-800 mb-2 pb-2">
+                  <div className="text-gray-400 text-sm mb-1">Driver</div>
+                  <Link
+                    to="/driver/login"
+                    className="block text-white py-2"
+                    onClick={() => setIsMenuOpen(false)}
+                  >
+                    Driver Login
+                  </Link>
+                  <Link
+                    to="/driver/register"
+                    className="block text-white py-2"
+                    onClick={() => setIsMenuOpen(false)}
+                  >
+                    Driver Sign Up
+                  </Link>
+                </div>
+                <div>
+                  <div className="text-gray-400 text-sm mb-1">Rider</div>
+                  <Link
+                    to="/rider/login"
+                    className="block text-white py-2"
+                    onClick={() => setIsMenuOpen(false)}
+                  >
+                    Rider Login
+                  </Link>
+                  <Link
+                    to="/rider/register"
+                    className="block text-white py-2"
+                    onClick={() => setIsMenuOpen(false)}
+                  >
+                    Rider Sign Up
+                  </Link>
+                </div>
               </>
             )}
           </nav>

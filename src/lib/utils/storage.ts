@@ -13,3 +13,20 @@ export async function uploadFile(
 export function getStoragePath(type: 'document' | 'profile' | 'licenses' | 'background-checks', userId: string, filename: string): string {
   return `${type}/${userId}/${filename}`;
 }
+
+export const uploadDriverPhoto = async (file: File, driverId: string): Promise<string> => {
+  try {
+    // Create a storage reference
+    const storageRef = ref(storage, `driver-photos/${driverId}`);
+
+    // Upload the file
+    const snapshot = await uploadBytes(storageRef, file);
+
+    // Get the download URL
+    const downloadURL = await getDownloadURL(snapshot.ref);
+    return downloadURL;
+  } catch (error) {
+    console.error('Error uploading photo:', error);
+    throw new Error('Failed to upload photo. Please try again.');
+  }
+};
