@@ -65,22 +65,26 @@ export default function DriverPortal() {
   const fetchAvailableDrivers = async () => {
     try {
       const driversRef = collection(db, 'drivers');
+      // First get all available drivers
       const q = query(
         driversRef,
-        where('isAvailable', '==', true),
-        where('id', '!=', user?.uid)
+        where('available', '==', true)
       );
       
       const querySnapshot = await getDocs(q);
       const drivers: Driver[] = [];
       
       querySnapshot.forEach((doc) => {
-        drivers.push({ id: doc.id, ...doc.data() } as Driver);
+        // Filter out current user in memory
+        if (doc.id !== user?.uid) {
+          drivers.push({ id: doc.id, ...doc.data() } as Driver);
+        }
       });
       
       setAvailableDrivers(drivers);
     } catch (error) {
       console.error('Error fetching available drivers:', error);
+      toast.error('Failed to fetch available drivers');
     }
   };
 

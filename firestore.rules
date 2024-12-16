@@ -50,6 +50,14 @@ service cloud.firestore {
       allow delete: if isAdmin();
     }
 
+    // Saved riders rules
+    match /saved_riders/{id} {
+      allow read, write: if isSignedIn() && (
+        request.auth.uid == resource.data.driverId || 
+        isAdmin()
+      );
+    }
+
     // Driver Schedules rules
     match /drivers/{driverId}/schedules/{scheduleId} {
       allow read: if isSignedIn() && (

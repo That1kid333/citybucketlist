@@ -41,8 +41,9 @@ export default function CommunicationHub({ driver }: CommunicationHubProps) {
         return;
       }
 
-      const ridersRef = collection(db, 'drivers', driver.id, 'savedRiders');
-      const querySnapshot = await getDocs(ridersRef);
+      const savedRidersRef = collection(db, 'saved_riders');
+      const q = query(savedRidersRef, where('driverId', '==', driver.id));
+      const querySnapshot = await getDocs(q);
       
       const riders: SavedRider[] = [];
       querySnapshot.forEach((doc) => {

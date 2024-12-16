@@ -18,11 +18,9 @@ export const ridesService = {
     try {
       console.log('Fetching available drivers');
       
-      // Simplified query without orderBy for now
       const q = query(
         collection(db, 'drivers'),
-        where('available', '==', true),
-        where('isActive', '==', true)
+        where('available', '==', true)
       );
 
       const querySnapshot = await getDocs(q);
@@ -31,7 +29,7 @@ export const ridesService = {
         ...doc.data()
       } as Driver));
 
-      // Sort in memory instead
+      // Sort by rating
       drivers.sort((a, b) => (b.rating || 0) - (a.rating || 0));
 
       console.log(`Found ${drivers.length} available drivers`);
@@ -53,12 +51,11 @@ export const ridesService = {
         return [];
       }
 
-      // Query for active and available drivers
+      // Query for available drivers in the location
       const q = query(
         collection(db, 'drivers'),
         where('locationId', '==', locationId),
-        where('available', '==', true),
-        where('isActive', '==', true)
+        where('available', '==', true)
       );
 
       const querySnapshot = await getDocs(q);
@@ -71,7 +68,7 @@ export const ridesService = {
         } as Driver;
       });
 
-      // Sort by rating (higher first)
+      // Sort by rating
       drivers.sort((a, b) => (b.rating || 0) - (a.rating || 0));
 
       console.log(`Found ${drivers.length} drivers for location:`, locationId);

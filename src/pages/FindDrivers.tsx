@@ -37,8 +37,6 @@ export default function FindDrivers() {
 
   // Listen to all available drivers
   useEffect(() => {
-    if (!driverData) return;
-
     // Set up real-time listener for available drivers
     const driversRef = collection(db, 'drivers');
     const q = query(
@@ -66,7 +64,7 @@ export default function FindDrivers() {
     });
 
     return () => unsubscribe();
-  }, [driverData, user?.uid]);
+  }, [user?.uid]);
 
   const handleToggleOnline = async (checked: boolean) => {
     if (!user?.uid || !driverData) return;
