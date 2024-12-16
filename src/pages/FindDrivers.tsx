@@ -15,6 +15,7 @@ export default function FindDrivers() {
   const [driverData, setDriverData] = useState<Driver | null>(null);
   const [allDrivers, setAllDrivers] = useState<{ [key: string]: Driver[] }>({});
   const [loading, setLoading] = useState(true);
+  const [selectedLocation, setSelectedLocation] = useState<string | null>(null);
 
   // Listen to current driver's data
   useEffect(() => {
@@ -35,83 +36,69 @@ export default function FindDrivers() {
     return () => unsubscribe();
   }, [user?.uid]);
 
-  // Listen to all available drivers
+  // Fetch all drivers grouped by location
   useEffect(() => {
-    // Set up real-time listener for available drivers
-    const driversRef = collection(db, 'drivers');
-    const q = query(
-      driversRef,
-      where('available', '==', true)
-    );
+    const fetchAllDrivers = async () => {
+      try {
+        setLoading(true);
+        const driversRef = collection(db, 'drivers');
+        const q = query(
+          driversRef,
+          where('available', '==', true)
+        );
 
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const drivers = snapshot.docs
-        .map(doc => ({ id: doc.id, ...doc.data() } as Driver))
-        .filter(d => d.id !== user?.uid);
-      
-      // Group drivers by location
-      const groupedDrivers = drivers.reduce((acc, driver) => {
-        const locationId = driver.locationId;
-        if (!acc[locationId]) {
-          acc[locationId] = [];
-        }
-        acc[locationId].push(driver);
-        return acc;
-      }, {} as { [key: string]: Driver[] });
-      
-      console.log('Grouped drivers by location:', groupedDrivers); // Debug log
-      setAllDrivers(groupedDrivers);
-    });
+        const querySnapshot = await getDocs(q);
+        const drivers = querySnapshot.docs
+          .map(doc => ({ id: doc.id, ...doc.data() } as Driver))
+          .filter(d => d.id !== user?.uid);
 
-    return () => unsubscribe();
+        // Group drivers by location
+        const groupedDrivers = drivers.reduce((acc, driver) => {
+          const locationId = driver.locationId;
+          if (!acc[locationId]) {
+            acc[locationId] = [];
+          }
+          acc[locationId].push(driver);
+          return acc;
+        }, {} as { [key: string]: Driver[] });
+
+        setAllDrivers(groupedDrivers);
+      } catch (error) {
+        console.error('Error fetching drivers:', error);
+        toast.error('Failed to load drivers');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchAllDrivers();
   }, [user?.uid]);
 
   const handleToggleOnline = async (checked: boolean) => {
     if (!user?.uid || !driverData) return;
 
     try {
-      console.log('Updating driver status:', { checked, driverId: user.uid }); // Debug log
       const driverRef = doc(db, 'drivers', user.uid);
       await updateDoc(driverRef, {
-        available: checked,
-        updated_at: new Date().toISOString()
+        available: checked
       });
-      
-      console.log('Driver status updated successfully'); // Debug log
       setIsOnline(checked);
-      toast.success(checked ? 'You are now online!' : 'You are now offline');
+      toast.success(checked ? 'You are now online' : 'You are now offline');
     } catch (error) {
-      console.error('Error updating driver status:', error);
+      console.error('Error updating status:', error);
       toast.error('Failed to update status');
-      setIsOnline(!checked);
     }
-  };
-
-  const getLocationName = (locationId: string) => {
-    const location = locations.find(loc => loc.id === locationId);
-    return location ? location.name : 'Unknown Location';
   };
 
   if (loading) {
     return (
       <div className="min-h-screen bg-black">
         <Header />
-        <main className="container mx-auto px-4 py-8">
-          <div className="text-white text-center">Loading...</div>
-        </main>
-      </div>
-    );
-  }
-
-  if (!driverData) {
-    return (
-      <div className="min-h-screen bg-black">
-        <Header />
-        <main className="container mx-auto px-4 py-8">
-          <div className="text-white text-center">
-            No driver profile found. Please contact support.
+        <div className="max-w-7xl mx-auto py-12 px-4">
+          <div className="flex justify-center items-center h-64">
+            <p className="text-white">Loading drivers...</p>
           </div>
-        </main>
+        </div>
       </div>
     );
   }
@@ -119,69 +106,53 @@ export default function FindDrivers() {
   return (
     <div className="min-h-screen bg-black">
       <Header />
-      
-      <main className="container mx-auto px-4 py-8">
-        <div className="max-w-7xl mx-auto">
-          <div className="flex items-center justify-between mb-8">
-            <div>
-              <h1 className="text-[#C69249] text-3xl font-bold">Driver Dashboard</h1>
-              <p className="text-white mt-2">
-                Your Location: {getLocationName(driverData.locationId)}
-              </p>
-            </div>
-            <div className="flex items-center gap-3">
+      <div className="max-w-7xl mx-auto py-12 px-4">
+        {user?.uid && driverData && (
+          <div className="mb-8 flex items-center justify-between bg-zinc-900 p-4 rounded-lg">
+            <div className="flex items-center gap-4">
+              <div className="w-3 h-3 rounded-full bg-[#C69249]" />
               <span className="text-white">
-                {isOnline ? 'Online' : 'Offline'}
+                {isOnline ? 'You are online' : 'You are offline'}
               </span>
-              <Switch
-                checked={isOnline}
-                onCheckedChange={handleToggleOnline}
-                className="data-[state=checked]:bg-[#C69249]"
-              />
             </div>
+            <Switch
+              checked={isOnline}
+              onCheckedChange={handleToggleOnline}
+            />
           </div>
+        )}
 
-          <div className="grid gap-8">
-            {/* Your Profile Section */}
-            <div>
-              <h2 className="text-white text-xl mb-4">Your Driver Profile</h2>
-              <DriverProfileCard driver={driverData} />
-            </div>
-            
-            {/* All Available Drivers Section */}
-            <div>
-              <h2 className="text-white text-xl mb-4">Available Drivers by Location</h2>
-              {Object.entries(allDrivers).length > 0 ? (
-                Object.entries(allDrivers).map(([locationId, drivers]) => (
-                  <div key={locationId} className="mb-8">
-                    <h3 className="text-[#C69249] text-lg mb-4">
-                      {getLocationName(locationId)} ({drivers.length} {drivers.length === 1 ? 'Driver' : 'Drivers'})
-                    </h3>
-                    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                      {drivers.map(driver => (
-                        <DriverProfileCard key={driver.id} driver={driver} />
-                      ))}
-                    </div>
-                  </div>
-                ))
-              ) : (
-                <p className="text-neutral-400">
-                  No other drivers currently available.
-                </p>
-              )}
-            </div>
-          </div>
+        <div className="space-y-12">
+          {Object.entries(allDrivers).map(([locationId, drivers]) => {
+            const location = locations.find(loc => loc.id === locationId);
+            if (!location) return null;
 
-          <div className="bg-neutral-900 rounded-lg p-6 mt-8">
-            <h2 className="text-white text-xl mb-4">Status</h2>
-            <p className="text-neutral-400">
-              {isOnline
-                ? 'You are currently online and visible to riders. You will receive ride requests in your area.'
-                : 'You are currently offline. Go online to start receiving ride requests.'}
-            </p>
-          </div>
+            return (
+              <div key={locationId} className="space-y-4">
+                <h2 className="text-xl font-bold text-[#C69249]">
+                  {location.name} ({drivers.length})
+                </h2>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {drivers.map((driver) => (
+                    <DriverProfileCard
+                      key={driver.id}
+                      driver={driver}
+                      showAvailabilityStatus={true}
+                      className="bg-zinc-900 hover:bg-zinc-800 transition-colors"
+                    />
+                  ))}
+                </div>
+              </div>
+            );
+          })}
+
+          {Object.keys(allDrivers).length === 0 && (
+            <div className="text-center py-12">
+              <p className="text-gray-400">No drivers found</p>
+            </div>
+          )}
         </div>
-      </main>
+      </div>
     </div>
   );
 }

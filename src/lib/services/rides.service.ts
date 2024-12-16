@@ -79,6 +79,84 @@ export const ridesService = {
     }
   },
 
+  async getAllDriversByLocation(locationId: string): Promise<Driver[]> {
+    try {
+      console.log('Fetching all drivers for location:', locationId);
+      
+      // Validate location exists
+      const location = locations.find(loc => loc.id === locationId);
+      if (!location) {
+        console.error('Invalid location ID:', locationId);
+        return [];
+      }
+
+      // Query for all drivers in the location, regardless of availability
+      const q = query(
+        collection(db, 'drivers'),
+        where('locationId', '==', locationId)
+      );
+
+      const querySnapshot = await getDocs(q);
+      const drivers = querySnapshot.docs.map(doc => {
+        const data = doc.data();
+        return {
+          id: doc.id,
+          ...data,
+          locationName: location.name
+        } as Driver;
+      });
+
+      // Sort by rating
+      drivers.sort((a, b) => (b.rating || 0) - (a.rating || 0));
+
+      console.log(`Found ${drivers.length} drivers for location:`, locationId);
+      return drivers;
+    } catch (error) {
+      console.error('Error fetching drivers:', error);
+      throw error;
+    }
+  },
+
+  async getAllDrivers(): Promise<{ [key: string]: Driver[] }> {
+    try {
+      console.log('Fetching all drivers');
+      
+      // Get all drivers
+      const driversRef = collection(db, 'drivers');
+      const querySnapshot = await getDocs(driversRef);
+      
+      // Group drivers by location
+      const driversByLocation: { [key: string]: Driver[] } = {};
+      
+      querySnapshot.docs.forEach(doc => {
+        const driver = { id: doc.id, ...doc.data() } as Driver;
+        const locationId = driver.locationId;
+        
+        if (!driversByLocation[locationId]) {
+          driversByLocation[locationId] = [];
+        }
+        
+        // Find location name
+        const location = locations.find(loc => loc.id === locationId);
+        if (location) {
+          driver.locationName = location.name;
+        }
+        
+        driversByLocation[locationId].push(driver);
+      });
+      
+      // Sort each location's drivers by rating
+      Object.keys(driversByLocation).forEach(locationId => {
+        driversByLocation[locationId].sort((a, b) => (b.rating || 0) - (a.rating || 0));
+      });
+
+      return driversByLocation;
+    } catch (error) {
+      console.error('Error fetching all drivers:', error);
+      throw error;
+    }
+  },
+
   async createRide(rideData: {
     name: string;
     phone: string;
