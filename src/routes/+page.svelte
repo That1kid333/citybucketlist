@@ -85,103 +85,104 @@
   }
 </script>
 
-<div class="min-h-screen bg-background">
-  <header class="py-6 px-4 border-b">
-    <div class="container mx-auto flex justify-between items-center">
-      <h1 class="text-2xl font-bold">RideShare</h1>
-      <div class="space-x-4">
-        <Button variant="outline" on:click={() => goto('/login')}>Login</Button>
-        <Button variant="default" on:click={() => goto('/register')}>Register</Button>
-      </div>
-    </div>
-  </header>
+<div class="min-h-screen bg-black relative">
+  <div class="absolute inset-0">
+    <img 
+      src="https://aiautomationsstorage.blob.core.windows.net/cbl/unnamed (6).jpg"
+      alt="Background"
+      class="w-full h-full object-cover opacity-20"
+    />
+  </div>
 
-  <main class="container mx-auto px-4 py-8">
-    <div class="max-w-2xl mx-auto">
-      <Card class="p-8">
-        <h2 class="text-3xl font-bold mb-6 text-center">Book a Ride</h2>
+  <div class="relative z-10">
+    <header class="py-4 px-6 flex justify-between items-center">
+      <h1 class="text-2xl font-bold text-[#C69249]">CITYBUCKETLIST.COM</h1>
+      <button class="text-white md:hidden">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16m-16 6h16" />
+        </svg>
+      </button>
+    </header>
 
-        <form on:submit|preventDefault={handleSubmit} class="space-y-6">
+    <main class="container mx-auto px-4 pt-12 pb-20">
+      <div class="max-w-xl mx-auto">
+        <h2 class="text-[#C69249] text-4xl md:text-5xl font-bold mb-4">NEED A RIDE?</h2>
+        <h3 class="text-white text-xl mb-4">Private Rider Association Sign-up & Scheduler</h3>
+        
+        <p class="text-white mb-8">
+          If you're looking for a ride to the airport or need a long distance run,<br />
+          please submit your info below. (Please schedule 24 hours prior)
+        </p>
+
+        <form on:submit|preventDefault={handleSubmit} class="space-y-6 bg-black/80 p-8 rounded-lg">
           {#if error}
-            <div class="bg-destructive/10 text-destructive p-3 rounded-md">{error}</div>
+            <div class="bg-red-500/10 text-red-500 p-3 rounded-md">{error}</div>
           {/if}
 
           <div class="space-y-2">
-            <Label for="name">Name *</Label>
-            <Input type="text" id="name" bind:value={name} required placeholder="Enter your name" />
-          </div>
-
-          <div class="space-y-2">
-            <Label for="phone">Phone Number *</Label>
-            <Input type="tel" id="phone" bind:value={phone} required placeholder="Enter your phone number" />
-          </div>
-
-          <div class="space-y-2">
-            <Label for="location">Location *</Label>
-            <select
-              id="location"
-              bind:value={selectedLocationId}
-              class="w-full p-2 border rounded-md"
-              required
-            >
-              <option value="">Select a location</option>
-              {#each locations as location}
-                <option value={location.id}>{location.name}</option>
-              {/each}
-            </select>
-          </div>
-
-          <div class="space-y-2">
-            <Label for="pickup">Pickup Address</Label>
-            <Input type="text" id="pickup" bind:value={pickup} placeholder="Enter pickup address" />
-          </div>
-
-          <div class="space-y-2">
-            <Label for="dropoff">Dropoff Address</Label>
-            <Input type="text" id="dropoff" bind:value={dropoff} placeholder="Enter dropoff address" />
-          </div>
-
-          {#if availableDrivers.length > 0}
-            <div class="space-y-2">
-              <Label for="driver">Select Driver (Optional)</Label>
-              <select
-                id="driver"
-                bind:value={selectedDriverId}
-                class="w-full p-2 border rounded-md"
+            <div class="flex items-center space-x-2 text-[#C69249]">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                <path fill-rule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clip-rule="evenodd" />
+              </svg>
+              <select 
+                class="flex-1 bg-white/10 text-white border border-[#C69249]/20 rounded-md p-3 focus:outline-none focus:border-[#C69249]"
               >
-                <option value="">Choose a driver</option>
-                {#each availableDrivers as driver}
-                  <option value={driver.id}>
-                    {driver.name} - Rating: {driver.rating || 5.0}⭐
-                  </option>
-                {/each}
+                <option>Pittsburgh, Pennsylvania</option>
               </select>
             </div>
-          {/if}
+          </div>
 
-          <Button type="submit" class="w-full" disabled={loading}>
-            {loading ? 'Requesting Ride...' : 'Request Ride'}
+          <div class="space-y-2">
+            <label class="block text-white">Name</label>
+            <Input 
+              type="text"
+              bind:value={name}
+              placeholder="Your full name"
+              class="w-full bg-white/10 text-white border border-[#C69249]/20 rounded-md p-3 focus:outline-none focus:border-[#C69249]"
+              required
+            />
+          </div>
+
+          <div class="space-y-2">
+            <label class="block text-white">Phone</label>
+            <Input 
+              type="tel"
+              bind:value={phone}
+              placeholder="Your phone number"
+              class="w-full bg-white/10 text-white border border-[#C69249]/20 rounded-md p-3 focus:outline-none focus:border-[#C69249]"
+              required
+            />
+          </div>
+
+          <div class="space-y-2">
+            <label class="block text-white">Pickup Location (Optional)</label>
+            <Input 
+              type="text"
+              bind:value={pickup}
+              placeholder="Enter pickup address"
+              class="w-full bg-white/10 text-white border border-[#C69249]/20 rounded-md p-3 focus:outline-none focus:border-[#C69249]"
+            />
+          </div>
+
+          <div class="space-y-2">
+            <label class="block text-white">Drop-off Location (Optional)</label>
+            <Input 
+              type="text"
+              bind:value={dropoff}
+              placeholder="Enter drop-off address"
+              class="w-full bg-white/10 text-white border border-[#C69249]/20 rounded-md p-3 focus:outline-none focus:border-[#C69249]"
+            />
+          </div>
+
+          <Button 
+            type="submit"
+            class="w-full bg-[#C69249] text-white py-3 rounded-md hover:bg-[#B58239] transition-colors"
+            disabled={loading}
+          >
+            Find Available Drivers
           </Button>
         </form>
-      </Card>
-
-      <div class="mt-8 text-center">
-        <h3 class="text-xl font-semibold mb-4">Why Register?</h3>
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <Card class="p-4">
-            <h4 class="font-semibold mb-2">Save Your Rides</h4>
-            <p class="text-muted-foreground">Keep track of all your ride history and favorite locations</p>
-          </Card>
-          <Card class="p-4">
-            <h4 class="font-semibold mb-2">Exclusive Discounts</h4>
-            <p class="text-muted-foreground">Get access to special offers and loyalty rewards</p>
-          </Card>
-          <Card class="p-4">
-            <h4 class="font-semibold mb-2">Priority Support</h4>
-            <p class="text-muted-foreground">24/7 customer support for registered users</p>
-          </Card>
-        </div>
       </div>
-    </div>
-  </main>
+    </main>
+  </div>
 </div>

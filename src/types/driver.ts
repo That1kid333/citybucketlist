@@ -35,7 +35,9 @@ export interface Driver {
     model: string;
     year: number;
     color: string;
+    plate: string;
   };
+  userType: 'driver' | 'rider';
   updated_at?: string;
   created_at?: string;
 }
@@ -53,8 +55,10 @@ export const initialDriver: Partial<Driver> = {
     make: "",
     model: "",
     year: 0,
-    color: ""
+    color: "",
+    plate: ""
   },
+  userType: 'driver',
   updated_at: "",
   created_at: ""
 };

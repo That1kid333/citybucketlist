@@ -415,6 +415,14 @@ export default function DriverRegistration() {
             {isSubmitting ? 'Registering...' : 'Complete Registration'}
           </button>
         </form>
+
+        <div className="mt-8 flex justify-center">
+          <img 
+            src="https://aiautomationsstorage.blob.core.windows.net/cbl/CBL%20PRIVATE%20MEMBERHIP%20ASSOCIATION%20SEAL.png"
+            alt="CBL Private Membership Association Seal"
+            className="w-32 h-32 object-contain opacity-50"
+          />
+        </div>
       </div>
     </div>
   );

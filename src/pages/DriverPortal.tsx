@@ -167,16 +167,12 @@ export default function DriverPortal() {
               </div>
             </>
           ) : location.pathname.includes('/schedule') ? (
-            <ScheduleManager driver={driver} />
+            <ScheduleManager driver={driver} userType="driver" />
           ) : location.pathname.includes('/messages') ? (
             <CommunicationHub driver={driver} />
           ) : location.pathname.includes('/rides') ? (
             <RidesManagement 
               driver={driver}
-              onTransferRide={(rideId) => {
-                setSelectedRide(rideId);
-                setShowTransferModal(true);
-              }}
             />
           ) : (
             <Overview driver={driver} />
@@ -203,16 +199,12 @@ export default function DriverPortal() {
                 </div>
               </>
             ) : location.pathname.includes('/schedule') ? (
-              <ScheduleManager driver={driver} />
+              <ScheduleManager driver={driver} userType="driver" />
             ) : location.pathname.includes('/messages') ? (
               <CommunicationHub driver={driver} />
             ) : location.pathname.includes('/rides') ? (
               <RidesManagement 
                 driver={driver}
-                onTransferRide={(rideId) => {
-                  setSelectedRide(rideId);
-                  setShowTransferModal(true);
-                }}
               />
             ) : (
               <Overview driver={driver} />
